@@ -21,9 +21,6 @@ interface ProductoDao {
     @Query("SELECT * FROM productos WHERE productoId = :id")
     fun obtenerProductoPorIdAsFlow(id: Int): Flow<Producto?>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertar(producto: Producto): Long
-
     @Update
     suspend fun actualizar(producto: Producto)
 
@@ -43,4 +40,11 @@ interface ProductoDao {
     // NUEVA FUNCIÓN PARA EL PASO 4
     @Query("SELECT * FROM productos WHERE nombre = :nombre LIMIT 1")
     suspend fun obtenerProductoPorNombre(nombre: String): Producto?
+
+    @Query("SELECT * FROM productos WHERE nombre LIKE '%' || :query || '%' LIMIT 5")
+    fun buscarSugerencias(query: String): Flow<List<Producto>>
+
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertar(producto: Producto): Long
 }

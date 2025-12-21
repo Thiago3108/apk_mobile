@@ -1,16 +1,12 @@
-// ARCHIVO: com/thiago/apk_mobile/presentation/InventarioViewModel.kt (CORREGIDO)
-
 package com.thiago.apk_mobile.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import com.thiago.apk_mobile.data.InventarioRepository
-import com.thiago.apk_mobile.data.Movimiento
-import com.thiago.apk_mobile.data.Producto
 import com.thiago.apk_mobile.data.*
-import com.thiago.apk_mobile.data.DetallePedido
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -33,11 +29,24 @@ class InventarioViewModel(private val repository: InventarioRepository) : ViewMo
     private val _movimientoFilterState = MutableStateFlow(MovimientoFilterState())
     val movimientoFilterState: StateFlow<MovimientoFilterState> = _movimientoFilterState
 
+
+
+    @OptIn(ExperimentalCoroutinesApi::class)
     val productosPaginados: Flow<PagingData<Producto>> = _searchQuery
         .flatMapLatest { query ->
             repository.obtenerProductosPaginados(query)
         }
         .cachedIn(viewModelScope)
+
+    @OptIn(kotlinx.coroutines.FlowPreview::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val sugerenciasBusqueda: StateFlow<List<Producto>> = _searchQuery
+        .debounce(300L)
+        .distinctUntilChanged()
+        .flatMapLatest { query ->
+            if (query.length < 2) flowOf(emptyList())
+            else repository.obtenerSugerencias(query)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val metricsUiState: StateFlow<MetricsUiState> =
         repository.stockTotal.combine(repository.valorTotal) { stock, valor ->
@@ -87,7 +96,6 @@ class InventarioViewModel(private val repository: InventarioRepository) : ViewMo
 
     fun obtenerStockActualAsStateFlow(productoId: Int): StateFlow<Int> {
         return repository.obtenerProductoPorIdAsFlow(productoId)
-            // CORREGIDO: Si el producto es nulo, el stock es 0
             .map { it?.cantidadEnStock ?: 0 }
             .stateIn(
                 scope = viewModelScope,
