@@ -8,13 +8,16 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface PedidoDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertar(pedido: Pedido): Long
+    suspend fun insertarDetalle(detalle: DetallePedido)
 
-    @Update
-    suspend fun actualizar(pedido: Pedido)
+    @Query("SELECT * FROM detalle_pedido")
+    fun obtenerTodosLosDetalles(): Flow<List<DetallePedido>>
 
     @Delete
-    suspend fun eliminar(pedido: Pedido)
+    suspend fun eliminarDetalle(detalle: DetallePedido)
+
+    @Query("DELETE FROM detalle_pedido WHERE detalleId = :id")
+    suspend fun eliminarDetallePorId(id: Int)
 
     @Query("SELECT * FROM pedidos WHERE pedidoId = :id")
     suspend fun obtenerPedidoPorId(id: Int): Pedido?
