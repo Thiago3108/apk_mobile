@@ -1,5 +1,3 @@
-// ARCHIVO: com/thiago/apk_mobile/data/InventarioRepository.kt (CORREGIDO)
-
 package com.thiago.apk_mobile.data
 
 import androidx.paging.Pager
@@ -11,52 +9,25 @@ class InventarioRepository(
     private val productoDao: ProductoDao,
     private val movimientoDao: MovimientoDao
 ) {
-
-    // --- PROPIEDADES DE MÉTRICAS ---
     val stockTotal: Flow<Int> = productoDao.obtenerStockTotal()
-    val valorTotal: Flow<Double?> = productoDao.obtenerValorTotal() // El valor puede ser nulo
+    val valorTotal: Flow<Double?> = productoDao.obtenerValorTotal()
 
     fun obtenerProductosPaginados(query: String): Flow<PagingData<Producto>> {
         return Pager(
-            config = PagingConfig(
-                pageSize = 20,
-                enablePlaceholders = false
-            ),
+            config = PagingConfig(pageSize = 20, enablePlaceholders = false),
             pagingSourceFactory = { productoDao.obtenerTodosProductos(query) }
         ).flow
     }
 
-    // --- FUNCIONES DE PRODUCTO ---
-
-    suspend fun insertarProducto(producto: Producto): Long {
-        return productoDao.insertar(producto)
-    }
-
-    suspend fun actualizarProducto(producto: Producto) {
-        productoDao.actualizar(producto)
-    }
-
-    suspend fun eliminarProducto(producto: Producto) {
-        productoDao.eliminar(producto)
-    }
-
-    // CORREGIDO: El producto puede no existir, devolvemos nullable
-    suspend fun obtenerProductoPorId(id: Int): Producto? {
-        return productoDao.obtenerProductoPorId(id)
-    }
-
-    // CORREGIDO: El Flow también puede emitir null o un producto inexistente
-    fun obtenerProductoPorIdAsFlow(id: Int): Flow<Producto?> {
-        return productoDao.obtenerProductoPorIdAsFlow(id)
-    }
-
-    // --- FUNCIONES DE MOVIMIENTO (LÓGICA DE NEGOCIO) ---
+    suspend fun insertarProducto(producto: Producto): Long = productoDao.insertar(producto)
+    suspend fun actualizarProducto(producto: Producto) = productoDao.actualizar(producto)
+    suspend fun eliminarProducto(producto: Producto) = productoDao.eliminar(producto)
+    suspend fun obtenerProductoPorId(id: Int): Producto? = productoDao.obtenerProductoPorId(id)
+    fun obtenerProductoPorIdAsFlow(id: Int): Flow<Producto?> = productoDao.obtenerProductoPorIdAsFlow(id)
 
     suspend fun registrarMovimiento(movimiento: Movimiento) {
         movimientoDao.insertar(movimiento)
         val producto = productoDao.obtenerProductoPorId(movimiento.productoId)
-
-        // CORREGIDO: Operar solo si el producto no es nulo
         producto?.let { p ->
             val nuevoStock = if (movimiento.tipo == "ENTRADA") {
                 p.cantidadEnStock + movimiento.cantidadAfectada
@@ -67,18 +38,38 @@ class InventarioRepository(
         }
     }
 
-    /** FUNCIÓN MODIFICADA PARA ACEPTAR FILTROS **/
+    // NUEVA LÓGICA: PROCESAR RECEPCIÓN
+    suspend fun procesarRecepcionPedido(detalles: List<DetallePedido>) {
+        detalles.forEach { detalle ->
+            val productoExistente = productoDao.obtenerProductoPorNombre(detalle.nombre)
+
+            val productoId: Int = if (productoExistente != null) {
+                productoExistente.productoId
+            } else {
+                val nuevoProducto = Producto(
+                    nombre = detalle.nombre,
+                    descripcion = "Registrado desde Pedidos",
+                    precio = detalle.precioUnitario,
+                    cantidadEnStock = 0,
+                    ubicacion = "Almacén General"
+                )
+                productoDao.insertar(nuevoProducto).toInt()
+            }
+
+            val movimiento = Movimiento(
+                productoId = productoId,
+                tipo = "ENTRADA",
+                cantidadAfectada = detalle.cantidadPedida,
+                razon = "Recepción de pedido: ${detalle.nombre}",
+                fecha = System.currentTimeMillis()
+            )
+            registrarMovimiento(movimiento)
+        }
+    }
+
     fun obtenerMovimientos(
-        productoId: Int,
-        tipo: String?,
-        fechaInicio: Long,
-        fechaFin: Long
+        productoId: Int, tipo: String?, fechaInicio: Long, fechaFin: Long
     ): Flow<List<Movimiento>> {
-        return movimientoDao.obtenerMovimientosDeProductoFiltrados(
-            productoId,
-            tipo,
-            fechaInicio,
-            fechaFin
-        )
+        return movimientoDao.obtenerMovimientosDeProductoFiltrados(productoId, tipo, fechaInicio, fechaFin)
     }
 }

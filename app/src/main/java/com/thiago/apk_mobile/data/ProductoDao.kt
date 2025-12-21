@@ -39,4 +39,8 @@ interface ProductoDao {
 
     @Query("SELECT IFNULL(SUM(cantidadEnStock * precio), 0.0) FROM productos")
     fun obtenerValorTotal(): Flow<Double>
+
+    // NUEVA FUNCIÓN PARA EL PASO 4
+    @Query("SELECT * FROM productos WHERE nombre = :nombre LIMIT 1")
+    suspend fun obtenerProductoPorNombre(nombre: String): Producto?
 }

@@ -19,6 +19,9 @@ interface PedidoDao {
     @Query("SELECT * FROM pedidos WHERE pedidoId = :id")
     suspend fun obtenerPedidoPorId(id: Int): Pedido?
 
+    @Query("SELECT * FROM productos WHERE nombre = :nombre LIMIT 1")
+    suspend fun obtenerProductoPorNombre(nombre: String): Producto?
+
     @Query("""
         SELECT * FROM pedidos 
         WHERE tipo = :tipo AND (:estado IS NULL OR estado = :estado) 

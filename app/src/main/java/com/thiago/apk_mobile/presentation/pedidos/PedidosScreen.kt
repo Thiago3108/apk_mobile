@@ -8,13 +8,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thiago.apk_mobile.data.DetallePedido
+import com.thiago.apk_mobile.presentation.InventarioViewModel
+import com.thiago.apk_mobile.presentation.getInventarioViewModelFactory
 
 @Composable
-fun PedidosScreen() {
-    // Lista simulada
+fun PedidosScreen(
+    inventarioViewModel: InventarioViewModel = viewModel(factory = getInventarioViewModelFactory(LocalContext.current))
+) {
     val listaSimulada = remember {
         mutableStateListOf(
             DetallePedido(1, "Clavos 2 pulgadas", 50, 0.10),
@@ -23,10 +27,7 @@ fun PedidosScreen() {
         )
     }
 
-    // Estado del checklist
     val itemsSeleccionados = remember { mutableStateMapOf<Int, Boolean>() }
-
-    // Contamos cuántos hay seleccionados para habilitar/deshabilitar el botón Aceptar
     val cantidadSeleccionados = itemsSeleccionados.values.count { it }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -36,17 +37,13 @@ fun PedidosScreen() {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        // Lista de productos
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(listaSimulada) { item ->
                 val isChecked = itemsSeleccionados[item.detalleId] ?: false
-
                 PedidoItemRow(
                     detalle = item,
                     isChecked = isChecked,
-                    onCheckedChange = { checked ->
-                        itemsSeleccionados[item.detalleId] = checked
-                    }
+                    onCheckedChange = { checked -> itemsSeleccionados[item.detalleId] = checked }
                 )
                 HorizontalDivider()
             }
@@ -54,12 +51,7 @@ fun PedidosScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // === SECCIÓN DE BOTONES (Paso 3) ===
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Botón Cancelar: Desmarca todo
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(
                 onClick = { itemsSeleccionados.clear() },
                 modifier = Modifier.weight(1f),
@@ -68,13 +60,14 @@ fun PedidosScreen() {
                 Text("Cancelar")
             }
 
-            // Botón Aceptar: Por ahora solo muestra un mensaje o se habilita si hay selección
             Button(
                 onClick = {
-                    /* Aquí irá la lógica del Paso 4 */
+                    val seleccionados = listaSimulada.filter { itemsSeleccionados[it.detalleId] == true }
+                    inventarioViewModel.recibirPedido(seleccionados)
+                    itemsSeleccionados.clear()
                 },
                 modifier = Modifier.weight(1f),
-                enabled = cantidadSeleccionados > 0 // Solo se activa si hay algo marcado
+                enabled = cantidadSeleccionados > 0
             ) {
                 Text("Aceptar ($cantidadSeleccionados)")
             }
@@ -83,40 +76,20 @@ fun PedidosScreen() {
 }
 
 @Composable
-fun PedidoItemRow(
-    detalle: DetallePedido,
-    isChecked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
+fun PedidoItemRow(detalle: DetallePedido, isChecked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onCheckedChange(!isChecked) }
-            .padding(vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!isChecked) }.padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-            Checkbox(
-                checked = isChecked,
-                onCheckedChange = onCheckedChange
-            )
-
+            Checkbox(checked = isChecked, onCheckedChange = onCheckedChange)
             Spacer(modifier = Modifier.width(8.dp))
-
             Column {
                 Text(text = detalle.nombre, style = MaterialTheme.typography.titleLarge)
-                Text(
-                    text = "Cantidad esperada: ${detalle.cantidadPedida}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Text(text = "Cantidad esperada: ${detalle.cantidadPedida}", style = MaterialTheme.typography.bodyMedium)
             }
         }
-
-        Text(
-            text = "$${detalle.precioUnitario}",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
+        Text(text = "$${detalle.precioUnitario}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
     }
 }

@@ -9,6 +9,8 @@ import androidx.paging.cachedIn
 import com.thiago.apk_mobile.data.InventarioRepository
 import com.thiago.apk_mobile.data.Movimiento
 import com.thiago.apk_mobile.data.Producto
+import com.thiago.apk_mobile.data.*
+import com.thiago.apk_mobile.data.DetallePedido
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -104,6 +106,12 @@ class InventarioViewModel(private val repository: InventarioRepository) : ViewMo
                 fechaInicio = inicio,
                 fechaFin = fin + 86399000L
             )
+        }
+    }
+
+    fun recibirPedido(detalles: List<DetallePedido>) {
+        viewModelScope.launch {
+            repository.procesarRecepcionPedido(detalles)
         }
     }
 }
