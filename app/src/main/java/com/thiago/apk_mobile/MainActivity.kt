@@ -4,29 +4,38 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.ListAlt
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.thiago.apk_mobile.presentation.inventory.InventarioScreen
 import com.thiago.apk_mobile.presentation.inventory.MovimientosScreen
 import com.thiago.apk_mobile.presentation.InventarioViewModel
 import com.thiago.apk_mobile.presentation.getInventarioViewModelFactory
+import com.thiago.apk_mobile.presentation.pedidos.PedidosScreen
 import com.thiago.apk_mobile.ui.theme.Apk_mobileTheme
 
-// Definición de Rutas
+// 1. Definición de las secciones principales para la barra inferior
+sealed class BottomBarScreen(val route: String, val label: String, val icon: ImageVector) {
+    object Inventario : BottomBarScreen("inventario_section", "Inventario", Icons.Default.Inventory)
+    object Pedidos : BottomBarScreen("pedidos_section", "Pedidos", Icons.Default.ListAlt)
+}
+
+// Rutas internas (las que ya tenías)
 object Destinations {
-    const val HOME_ROUTE = "home"
+    const val INVENTARIO_HOME = "inventario_home"
+    const val PEDIDOS_HOME = "pedidos_home"
     const val DETAIL_ROUTE = "detail/{productoId}/{productoNombre}"
-    const val PRODUCTO_ID_KEY = "productoId"
-    const val PRODUCTO_NOMBRE_KEY = "productoNombre"
 }
 
 class MainActivity : ComponentActivity() {
@@ -38,7 +47,6 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // Inicializamos el ViewModel con el Factory
                     val viewModel: InventarioViewModel = viewModel(
                         factory = getInventarioViewModelFactory(applicationContext)
                     )
@@ -52,47 +60,73 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun InventoryApp(viewModel: InventarioViewModel) {
     val navController = rememberNavController()
+    val screens = listOf(BottomBarScreen.Inventario, BottomBarScreen.Pedidos)
 
-    NavHost(
-        navController = navController,
-        startDestination = Destinations.HOME_ROUTE
-    ) {
-        // 1. Pantalla Principal
-        composable(Destinations.HOME_ROUTE) {
-            InventarioScreen(
-                inventarioViewModel = viewModel,
-                onProductoClick = { productId, productName ->
-                    navController.navigate("detail/$productId/$productName")
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentDestination = navBackStackEntry?.destination
+
+                screens.forEach { screen ->
+                    NavigationBarItem(
+                        label = { Text(screen.label) },
+                        icon = { Icon(screen.icon, contentDescription = screen.label) },
+                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                        onClick = {
+                            navController.navigate(screen.route) {
+                                // Evita acumular muchas instancias de la misma pantalla
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
                 }
-            )
-        }
-
-        // 2. Pantalla de Detalle de Producto (Movimientos)
-        composable(
-            Destinations.DETAIL_ROUTE,
-            arguments = listOf(
-                navArgument(Destinations.PRODUCTO_ID_KEY) { type = NavType.IntType },
-                navArgument(Destinations.PRODUCTO_NOMBRE_KEY) { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val productId = backStackEntry.arguments?.getInt(Destinations.PRODUCTO_ID_KEY)
-            val productName = backStackEntry.arguments?.getString(Destinations.PRODUCTO_NOMBRE_KEY)
-            if (productId != null && productName != null) {
-                MovimientosScreen(
-                    productoId = productId,
-                    productoNombre = productName,
-                    onBackClick = { navController.popBackStack() },
-                    inventarioViewModel = viewModel
-                )
             }
         }
-    }
-}
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = BottomBarScreen.Inventario.route,
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            // SECCIÓN: INVENTARIO (Contenedor)
+            composable(BottomBarScreen.Inventario.route) {
+                InventarioScreen(
+                    inventarioViewModel = viewModel,
+                    onProductoClick = { productId, productName ->
+                        navController.navigate("detail/$productId/$productName")
+                    }
+                )
+            }
 
-@Preview(showBackground = true)
-@Composable
-fun DefaultPreview() {
-    Apk_mobileTheme {
-        // Para la preview, necesitarías un ViewModel de prueba o un estado simulado.
+            // SECCIÓN: PEDIDOS (Contenedor)
+            composable(BottomBarScreen.Pedidos.route) {
+                PedidosScreen()
+            }
+
+            // RUTA DE DETALLE (Fuera de la barra pero accesible desde Inventario)
+            composable(
+                route = Destinations.DETAIL_ROUTE,
+                arguments = listOf(
+                    navArgument("productoId") { type = NavType.IntType },
+                    navArgument("productoNombre") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val productId = backStackEntry.arguments?.getInt("productoId")
+                val productName = backStackEntry.arguments?.getString("productoNombre")
+                if (productId != null && productName != null) {
+                    MovimientosScreen(
+                        productoId = productId,
+                        productoNombre = productName,
+                        onBackClick = { navController.popBackStack() },
+                        inventarioViewModel = viewModel
+                    )
+                }
+            }
+        }
     }
 }
