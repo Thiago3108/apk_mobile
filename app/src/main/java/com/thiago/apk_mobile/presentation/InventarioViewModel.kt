@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 
 data class MovimientoFilterState(
     val tipo: String? = null,
-    val fechaInicio: Long = System.currentTimeMillis() - 3153600000000L,
+    val fechaInicio: Long = System.currentTimeMillis() - 315360000000L,
     val fechaFin: Long = System.currentTimeMillis() + 86400000L
 )
 
@@ -29,7 +29,8 @@ class InventarioViewModel(private val repository: InventarioRepository) : ViewMo
     private val _movimientoFilterState = MutableStateFlow(MovimientoFilterState())
     val movimientoFilterState: StateFlow<MovimientoFilterState> = _movimientoFilterState
 
-
+    val detallesPedido: StateFlow<List<DetallePedido>> = repository.obtenerDetallesPedido()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val productosPaginados: Flow<PagingData<Producto>> = _searchQuery
@@ -117,9 +118,30 @@ class InventarioViewModel(private val repository: InventarioRepository) : ViewMo
         }
     }
 
+    // --- Funciones para manejar los pedidos desde la BD ---
+    fun agregarDetallePedido(detalle: DetallePedido) {
+        viewModelScope.launch {
+            repository.insertarDetallePedido(detalle)
+        }
+    }
+
+    fun borrarDetallePedido(detalle: DetallePedido) {
+        viewModelScope.launch {
+            repository.borrarDetallePedido(detalle)
+        }
+    }
+
+    // CORREGIDO: Acepta la lista de detalles marcados
     fun recibirPedido(detalles: List<DetallePedido>) {
         viewModelScope.launch {
             repository.procesarRecepcionPedido(detalles)
+        }
+    }
+
+    // AÑADIDO: La función que faltaba
+    fun limpiarPedidos() {
+        viewModelScope.launch {
+            repository.limpiarTodosLosPedidos()
         }
     }
 }

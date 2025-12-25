@@ -7,12 +7,12 @@ import kotlinx.coroutines.flow.Flow
 
 class InventarioRepository(
     private val productoDao: ProductoDao,
-    private val movimientoDao: MovimientoDao
+    private val movimientoDao: MovimientoDao,
+    private val detallePedidoDao: DetallePedidoDao
 ) {
     val stockTotal: Flow<Int> = productoDao.obtenerStockTotal()
     val valorTotal: Flow<Double?> = productoDao.obtenerValorTotal()
 
-    // Dentro de InventarioRepository.kt agrega esta función:
     fun obtenerSugerencias(query: String): Flow<List<Producto>> {
         return productoDao.buscarSugerencias(query)
     }
@@ -43,47 +43,44 @@ class InventarioRepository(
         }
     }
 
-    // NUEVA LÓGICA: PROCESAR RECEPCIÓN
-
+    // CORREGIDO: Acepta la lista de detalles y los borra después de procesarlos
     suspend fun procesarRecepcionPedido(detalles: List<DetallePedido>) {
+        if (detalles.isEmpty()) return
+
         detalles.forEach { detalle ->
-            // 1. Buscar si el producto ya existe por nombre
             val productoExistente = productoDao.obtenerProductoPorNombre(detalle.nombre)
 
             if (productoExistente != null) {
-                // 2. Si existe, actualizar stock y precio
                 val nuevoStock = productoExistente.cantidadEnStock + detalle.cantidadPedida
                 productoDao.actualizar(productoExistente.copy(
                     cantidadEnStock = nuevoStock,
                     precio = detalle.precioUnitario
                 ))
 
-                // REGISTRO DE MOVIMIENTO (Nombres corregidos según tu error)
                 movimientoDao.insertar(Movimiento(
                     productoId = productoExistente.productoId,
                     tipo = "ENTRADA",
-                    cantidadAfectada = detalle.cantidadPedida, // Antes decía 'cantidad'
-                    razon = "Recepción de Pedido"             // Antes decía 'motivo'
+                    cantidadAfectada = detalle.cantidadPedida,
+                    razon = "Recepción de Pedido"
                 ))
             } else {
-                // 3. Si no existe, crear producto nuevo
-                // NOTA: He añadido descripción y ubicación vacíos para cumplir con los parámetros que te faltaban
                 val nuevoId = productoDao.insertar(Producto(
                     nombre = detalle.nombre,
                     cantidadEnStock = detalle.cantidadPedida,
                     precio = detalle.precioUnitario,
-                    descripcion = "",       // Parámetro requerido según el error
-                    ubicacion = ""          // Parámetro requerido según el error
-                    // Si tu modelo no usa 'categoria', asegúrate de borrarla de aquí
+                    descripcion = "",
+                    ubicacion = ""
                 ))
 
                 movimientoDao.insertar(Movimiento(
                     productoId = nuevoId.toInt(),
                     tipo = "ENTRADA",
-                    cantidadAfectada = detalle.cantidadPedida, // Antes decía 'cantidad'
-                    razon = "Producto Nuevo desde Pedido"      // Antes decía 'motivo'
+                    cantidadAfectada = detalle.cantidadPedida,
+                    razon = "Producto Nuevo desde Pedido"
                 ))
             }
+            // Borramos el detalle individual una vez procesado
+            detallePedidoDao.borrar(detalle)
         }
     }
 
@@ -91,5 +88,21 @@ class InventarioRepository(
         productoId: Int, tipo: String?, fechaInicio: Long, fechaFin: Long
     ): Flow<List<Movimiento>> {
         return movimientoDao.obtenerMovimientosDeProductoFiltrados(productoId, tipo, fechaInicio, fechaFin)
+    }
+
+    // --- Métodos para Detalles de Pedido ---
+    fun obtenerDetallesPedido(): Flow<List<DetallePedido>> = detallePedidoDao.obtenerTodos()
+
+    suspend fun insertarDetallePedido(detalle: DetallePedido) {
+        detallePedidoDao.insertar(detalle)
+    }
+
+    suspend fun borrarDetallePedido(detalle: DetallePedido) {
+        detallePedidoDao.borrar(detalle)
+    }
+
+    // AÑADIDO: La función que faltaba
+    suspend fun limpiarTodosLosPedidos() {
+        detallePedidoDao.borrarTodos()
     }
 }

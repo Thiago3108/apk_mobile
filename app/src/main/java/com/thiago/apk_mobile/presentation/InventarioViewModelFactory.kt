@@ -1,5 +1,3 @@
-// Archivo: InventarioViewModelFactory.kt (CORREGIDO)
-
 package com.thiago.apk_mobile.presentation
 
 import android.content.Context
@@ -13,7 +11,6 @@ import com.thiago.apk_mobile.data.InventarioRepository
  */
 class InventarioViewModelFactory(private val repository: InventarioRepository) : ViewModelProvider.Factory {
 
-    // Sobreescribe el método para crear el ViewModel
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(InventarioViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
@@ -32,10 +29,11 @@ fun getInventarioViewModelFactory(context: Context? = null): InventarioViewModel
             check(context != null) { "Contexto es requerido para inicializar el factory por primera vez" }
             val db = InventarioDatabase.getDatabase(context.applicationContext)
             
-            // CORREGIDO: Se eliminan los DAOs que ya no existen (pedidoDao, detallePedidoDao)
+            // CORREGIDO: Añadimos el DAO que faltaba
             val repository = InventarioRepository(
                 productoDao = db.productoDao(),
-                movimientoDao = db.movimientoDao()
+                movimientoDao = db.movimientoDao(),
+                detallePedidoDao = db.detallePedidoDao() // <-- PARÁMETRO AÑADIDO
             )
             INSTANCE = InventarioViewModelFactory(repository)
         }

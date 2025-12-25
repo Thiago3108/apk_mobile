@@ -1,4 +1,3 @@
-// Archivo: InventarioDatabase.kt (MODIFICADO)
 package com.thiago.apk_mobile.data
 
 import android.content.Context
@@ -8,15 +7,14 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [Producto::class, Movimiento::class, Pedido::class, DetallePedido::class],
-    version = 4, // <-- INCREMENTA A 4
+    version = 4,
     exportSchema = false
 )
 abstract class InventarioDatabase : RoomDatabase() {
 
     abstract fun productoDao(): ProductoDao
     abstract fun movimientoDao(): MovimientoDao
-    // Agregaremos el DAO de pedidos más adelante para ir paso a paso
-    // Por ahora solo necesitamos que las tablas existan
+    abstract fun detallePedidoDao(): DetallePedidoDao // <-- AÑADIDO
 
     companion object {
         @Volatile
@@ -29,6 +27,8 @@ abstract class InventarioDatabase : RoomDatabase() {
                     InventarioDatabase::class.java,
                     "inventario_db"
                 )
+                    // Con esto, al subir la versión, la base de datos se recreará.
+                    // ¡CUIDADO! Esto borra todos los datos existentes. Es útil para desarrollo.
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
