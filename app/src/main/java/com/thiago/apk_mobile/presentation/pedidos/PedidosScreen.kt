@@ -84,7 +84,7 @@ fun PedidosScreen(
                                         mostrarDialogoProducto = true
                                     }
                                 )
-                                Divider(thickness = 0.5.dp)
+                                HorizontalDivider()
                             }
                         }
                     }
@@ -118,12 +118,15 @@ fun PedidosScreen(
         }
 
         Row(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = {
-                viewModel.limpiarPedidos()
-                itemsSeleccionados.clear()
-            }, modifier = Modifier.weight(1f)) {
-                Text("Limpiar")
+            // --- BOTÓN "LIMPIAR" MODIFICADO ---
+            OutlinedButton(
+                onClick = { itemsSeleccionados.clear() }, // Solo limpia el estado de la UI
+                modifier = Modifier.weight(1f),
+                enabled = itemsSeleccionados.any { it.value } // Se activa solo si hay algo seleccionado
+            ) {
+                Text("Deseleccionar") // Nuevo texto
             }
+            
             Button(
                 onClick = {
                     val marcados = listaPedidos.filter { itemsSeleccionados[it.detalleId] == true }

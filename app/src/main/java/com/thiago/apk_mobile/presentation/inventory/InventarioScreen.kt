@@ -151,7 +151,11 @@ fun InventarioBody(
     onRegisterMovementClick: (Producto) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(modifier = modifier.fillMaxWidth()) {
+    // LA SOLUCIÓN ESTÁ AQUÍ:
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(bottom = 80.dp) // <-- AÑADIMOS PADDING INFERIOR
+    ) {
         item(key = "search_field") {
             OutlinedTextField(
                 value = searchQuery,
