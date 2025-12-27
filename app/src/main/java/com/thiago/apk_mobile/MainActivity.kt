@@ -19,6 +19,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import com.thiago.apk_mobile.presentation.facturas.FacturaDetailScreen
 import com.thiago.apk_mobile.presentation.facturas.FacturaFormScreen
 import com.thiago.apk_mobile.presentation.facturas.FacturasScreen
 import com.thiago.apk_mobile.presentation.inventory.InventarioScreen
@@ -39,6 +40,7 @@ sealed class BottomBarScreen(val route: String, val label: String, val icon: Ima
 object Destinations {
     const val DETAIL_ROUTE = "detail/{productoId}/{productoNombre}"
     const val FACTURA_FORM_ROUTE = "factura_form"
+    const val FACTURA_DETAIL_ROUTE = "factura_detail/{facturaId}"
 }
 
 class MainActivity : ComponentActivity() {
@@ -114,7 +116,10 @@ fun InventoryApp(viewModel: InventarioViewModel) {
             composable(BottomBarScreen.Facturas.route) {
                 FacturasScreen(
                     inventarioViewModel = viewModel,
-                    onNavigateToForm = { navController.navigate(Destinations.FACTURA_FORM_ROUTE) }
+                    onNavigateToForm = { navController.navigate(Destinations.FACTURA_FORM_ROUTE) },
+                    onNavigateToDetail = { facturaId ->
+                        navController.navigate("factura_detail/$facturaId")
+                    }
                 )
             }
 
@@ -124,6 +129,20 @@ fun InventoryApp(viewModel: InventarioViewModel) {
                     onSave = { navController.popBackStack() },
                     onBack = { navController.popBackStack() }
                 )
+            }
+
+            composable(
+                route = Destinations.FACTURA_DETAIL_ROUTE,
+                arguments = listOf(navArgument("facturaId") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val facturaId = backStackEntry.arguments?.getLong("facturaId")
+                if (facturaId != null) {
+                    FacturaDetailScreen(
+                        facturaId = facturaId,
+                        inventarioViewModel = viewModel,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
 
             composable(

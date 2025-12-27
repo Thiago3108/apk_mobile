@@ -6,6 +6,8 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.thiago.apk_mobile.data.*
 import com.thiago.apk_mobile.presentation.facturas.ArticuloFactura
+import com.thiago.apk_mobile.presentation.facturas.ArticuloVendidoDisplay
+import com.thiago.apk_mobile.presentation.facturas.FacturaDisplay
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
@@ -84,6 +86,30 @@ class InventarioViewModel(private val repository: InventarioRepository) : ViewMo
 
     fun onSearchQueryChange(newQuery: String) {
         _searchQuery.value = newQuery
+    }
+
+    fun getFacturaDisplayById(facturaId: Long): Flow<FacturaDisplay?> = flow {
+        repository.getFacturaConArticulosById(facturaId).collect { facturaConArticulos ->
+            if (facturaConArticulos == null) {
+                emit(null)
+                return@collect
+            }
+
+            val articulosDisplay = facturaConArticulos.articulos.mapNotNull { articulo ->
+                val producto = repository.obtenerProductoPorId(articulo.productoId)
+                if (producto != null) {
+                    ArticuloVendidoDisplay(
+                        productoNombre = producto.nombre,
+                        cantidad = articulo.cantidad,
+                        precioUnitario = articulo.precioUnitario,
+                        total = articulo.cantidad * articulo.precioUnitario
+                    )
+                } else {
+                    null // O manejar el caso de un producto no encontrado
+                }
+            }
+            emit(FacturaDisplay(facturaConArticulos.factura, articulosDisplay))
+        }
     }
 
     suspend fun insertarProducto(producto: Producto): Long {

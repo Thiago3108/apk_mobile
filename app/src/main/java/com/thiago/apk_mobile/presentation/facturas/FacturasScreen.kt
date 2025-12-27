@@ -1,5 +1,6 @@
 package com.thiago.apk_mobile.presentation.facturas
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,7 +23,8 @@ import java.util.Locale
 @Composable
 fun FacturasScreen(
     inventarioViewModel: InventarioViewModel,
-    onNavigateToForm: () -> Unit
+    onNavigateToForm: () -> Unit,
+    onNavigateToDetail: (Long) -> Unit
 ) {
     val facturas by inventarioViewModel.facturas.collectAsState()
     val filterState by inventarioViewModel.facturaFilterState.collectAsState()
@@ -92,7 +94,7 @@ fun FacturasScreen(
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 16.dp)) {
                     items(facturas) {
-                        facturaItem -> FacturaCard(factura = facturaItem)
+                        facturaItem -> FacturaCard(factura = facturaItem, onClick = { onNavigateToDetail(facturaItem.factura.facturaId) })
                     }
                 }
             }
@@ -101,14 +103,15 @@ fun FacturasScreen(
 }
 
 @Composable
-fun FacturaCard(factura: FacturaConArticulos) {
+fun FacturaCard(factura: FacturaConArticulos, onClick: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp)
+            .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(

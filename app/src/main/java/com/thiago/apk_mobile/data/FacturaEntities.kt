@@ -20,7 +20,7 @@ data class Factura(
 @Entity(
     tableName = "factura_articulos",
     primaryKeys = ["facturaId", "productoId"],
-    indices = [Index(value = ["productoId"])], // <-- ÍNDICE AÑADIDO
+    indices = [Index(value = ["productoId"])],
     foreignKeys = [
         ForeignKey(
             entity = Factura::class,
@@ -39,15 +39,14 @@ data class FacturaArticulo(
     val facturaId: Long,
     val productoId: Int,
     val cantidad: Int,
-    val precioUnitario: Double // Store price at the time of sale
+    val precioUnitario: Double
 )
 
 data class FacturaConArticulos(
     @Embedded val factura: Factura,
     @Relation(
         parentColumn = "facturaId",
-        entityColumn = "facturaId",
-        entity = FacturaArticulo::class
+        entityColumn = "facturaId"
     )
     val articulos: List<FacturaArticulo>
 )

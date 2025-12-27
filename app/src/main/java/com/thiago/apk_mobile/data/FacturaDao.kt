@@ -18,4 +18,11 @@ interface FacturaDao {
     @Transaction
     @Query("SELECT * FROM facturas WHERE nombreCliente LIKE '%' || :query || '%' AND fecha BETWEEN :fechaInicio AND :fechaFin ORDER BY fecha DESC")
     fun getFacturas(query: String, fechaInicio: Long, fechaFin: Long): Flow<List<FacturaConArticulos>>
+
+    @Transaction
+    @Query("SELECT * FROM facturas WHERE facturaId = :facturaId")
+    fun getFacturaConArticulosById(facturaId: Long): Flow<FacturaConArticulos?>
+
+    @Query("DELETE FROM facturas WHERE facturaId = :facturaId")
+    suspend fun deleteFacturaById(facturaId: Long)
 }

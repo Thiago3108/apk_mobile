@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [Producto::class, Movimiento::class, Pedido::class, DetallePedido::class, Factura::class, FacturaArticulo::class],
-    version = 5,
+    version = 5, // Revertido para evitar problemas con el schema
     exportSchema = false
 )
 abstract class InventarioDatabase : RoomDatabase() {
@@ -28,8 +28,6 @@ abstract class InventarioDatabase : RoomDatabase() {
                     InventarioDatabase::class.java,
                     "inventario_db"
                 )
-                    // Con esto, al subir la versión, la base de datos se recreará.
-                    // ¡CUIDADO! Esto borra todos los datos existentes. Es útil para desarrollo.
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

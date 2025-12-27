@@ -26,6 +26,10 @@ class InventarioRepository(
         return facturaDao.getFacturas(query, fechaInicio, fechaFin)
     }
 
+    fun getFacturaConArticulosById(facturaId: Long): Flow<FacturaConArticulos?> {
+        return facturaDao.getFacturaConArticulosById(facturaId)
+    }
+
     fun obtenerSugerencias(query: String): Flow<List<Producto>> {
         return productoDao.buscarSugerencias(query)
     }
