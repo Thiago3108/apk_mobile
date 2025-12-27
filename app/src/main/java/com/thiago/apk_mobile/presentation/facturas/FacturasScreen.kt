@@ -83,25 +83,28 @@ fun FacturasScreen(
         }
         DeviceSelectionDialog(
             devices = pairedDevices,
-            onDeviceSelected = {
-                device ->
-                scope.launch {
-                    showPrintDialog = false
-                    val factura = facturaAImprimir!!
-                    val inputStream = context.resources.openRawResource(R.raw.factura_template)
-                    val template = BufferedReader(InputStreamReader(inputStream)).readText()
-                    val facturaDisplay = inventarioViewModel.getFacturaDisplayById(factura.factura.facturaId).first()
-                    
-                    if (facturaDisplay != null) {
-                        val printableText = PrintingHelper.generatePrintableFactura(template, facturaDisplay)
-                        val result = printerHelper.printText(device.address, printableText)
-                        result.onSuccess {
-                            snackbarHostState.showSnackbar("Impresión enviada correctamente.")
-                        }.onFailure {
-                            snackbarHostState.showSnackbar("Error al imprimir: ${it.message}")
+            onDeviceSelected = { device ->
+                val facturaToPrintNow = facturaAImprimir
+                
+                showPrintDialog = false
+                facturaAImprimir = null
+
+                if (facturaToPrintNow != null) {
+                    scope.launch {
+                        val inputStream = context.resources.openRawResource(R.raw.factura_template)
+                        val template = BufferedReader(InputStreamReader(inputStream)).readText()
+                        val facturaDisplay = inventarioViewModel.getFacturaDisplayById(facturaToPrintNow.factura.facturaId).first()
+
+                        if (facturaDisplay != null) {
+                            val printableText = PrintingHelper.generatePrintableFactura(template, facturaDisplay)
+                            val result = printerHelper.printText(device.address, printableText)
+                            result.onSuccess {
+                                snackbarHostState.showSnackbar("Impresión enviada correctamente.")
+                            }.onFailure {
+                                snackbarHostState.showSnackbar("Error al imprimir: ${it.message}")
+                            }
                         }
                     }
-                    facturaAImprimir = null
                 }
             },
             onDismiss = { 
