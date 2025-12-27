@@ -16,6 +16,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.thiago.apk_mobile.data.Producto
 import com.thiago.apk_mobile.presentation.InventarioViewModel
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 
@@ -31,22 +33,32 @@ fun FacturaFormScreen(
     var cedulaCliente by remember { mutableStateOf("") }
     val articulosFactura = remember { mutableStateListOf<ArticuloFactura>() }
     val isEditMode = facturaId != null
+    var dataLoaded by remember { mutableStateOf(!isEditMode) }
 
     // Cargar los datos si estamos en modo edición
     LaunchedEffect(facturaId) {
         if (isEditMode && facturaId != null) {
-            val facturaToEdit = inventarioViewModel.getFacturaDisplayById(facturaId).filterNotNull().first()
-            nombreCliente = facturaToEdit.factura.nombreCliente
-            cedulaCliente = facturaToEdit.factura.cedulaCliente
-            
-            // Mapear los artículos para la edición
-            val productos = inventarioViewModel.productos.first()
-            val articulosParaCargar = facturaToEdit.articulos.mapNotNull { articuloVendido ->
-                productos.find { it.nombre == articuloVendido.productoNombre }?.let { producto ->
-                    ArticuloFactura(producto, articuloVendido.cantidad)
+            // Combina el flujo de la factura específica y el de los productos.
+            // Esto asegura que no procedemos hasta que ambos flujos tengan datos.
+            combine(
+                inventarioViewModel.getFacturaDisplayById(facturaId).filterNotNull(),
+                inventarioViewModel.productos.filter { it.isNotEmpty() }
+            ) { factura, productos ->
+                factura to productos
+            }.first().let { (facturaToEdit, productos) ->
+                // Una vez que tenemos ambos, rellenamos el estado del formulario
+                nombreCliente = facturaToEdit.factura.nombreCliente
+                cedulaCliente = facturaToEdit.factura.cedulaCliente
+
+                val articulosParaCargar = facturaToEdit.articulos.mapNotNull { articuloVendido ->
+                    productos.find { it.nombre == articuloVendido.productoNombre }?.let { producto ->
+                        ArticuloFactura(producto, articuloVendido.cantidad)
+                    }
                 }
+                articulosFactura.clear()
+                articulosFactura.addAll(articulosParaCargar)
+                dataLoaded = true
             }
-            articulosFactura.addAll(articulosParaCargar)
         }
     }
 
@@ -62,74 +74,79 @@ fun FacturaFormScreen(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-        ) {
-            // --- Sección de Datos del Cliente ---
-            OutlinedTextField(
-                value = nombreCliente,
-                onValueChange = { nombreCliente = it },
-                label = { Text("Nombre del cliente") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = cedulaCliente,
-                onValueChange = { cedulaCliente = it },
-                label = { Text("Cédula del cliente") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            Divider(modifier = Modifier.padding(vertical = 16.dp))
-
-            // --- Sección para Añadir Productos ---
-            ProductSuggester(
-                inventarioViewModel = inventarioViewModel,
-                articulosActuales = articulosFactura.toList()
-            ) { producto, cantidad ->
-                val existing = articulosFactura.find { it.producto.productoId == producto.productoId }
-                if (existing != null) {
-                    val updated = existing.copy(cantidad = existing.cantidad + cantidad)
-                    articulosFactura[articulosFactura.indexOf(existing)] = updated
-                } else {
-                    articulosFactura.add(ArticuloFactura(producto, cantidad))
-                }
+        if (!dataLoaded) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // --- Lista de Artículos Agregados ---
-            Text("Artículos a facturar", style = MaterialTheme.typography.titleMedium)
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(articulosFactura) { articulo ->
-                   ArticuloItemRow(articulo = articulo, onRemove = { articulosFactura.remove(articulo) })
-                }
-            }
-
-            // --- Totales y Botón de Guardar ---
-            val totalFactura = articulosFactura.sumOf { it.producto.precio * it.cantidad }
-            Text("Total: $${totalFactura}", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.align(Alignment.End))
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(
-                onClick = {
-                    // TODO: Llamar a la función de actualizar si estamos en modo edición
-                    if (isEditMode) {
-                        // viewModel.updateFactura(...)
-                    } else {
-                        inventarioViewModel.generarFactura(nombreCliente, cedulaCliente, articulosFactura)
-                    }
-                    onSave()
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = nombreCliente.isNotBlank() && cedulaCliente.isNotBlank() && articulosFactura.isNotEmpty()
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp),
             ) {
-                Text("Guardar Factura")
+                // --- Sección de Datos del Cliente ---
+                OutlinedTextField(
+                    value = nombreCliente,
+                    onValueChange = { nombreCliente = it },
+                    label = { Text("Nombre del cliente") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = cedulaCliente,
+                    onValueChange = { cedulaCliente = it },
+                    label = { Text("Cédula del cliente") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Divider(modifier = Modifier.padding(vertical = 16.dp))
+
+                // --- Sección para Añadir Productos ---
+                ProductSuggester(
+                    inventarioViewModel = inventarioViewModel,
+                    articulosActuales = articulosFactura.toList()
+                ) { producto, cantidad ->
+                    val existing = articulosFactura.find { it.producto.productoId == producto.productoId }
+                    if (existing != null) {
+                        val updated = existing.copy(cantidad = existing.cantidad + cantidad)
+                        articulosFactura[articulosFactura.indexOf(existing)] = updated
+                    } else {
+                        articulosFactura.add(ArticuloFactura(producto, cantidad))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // --- Lista de Artículos Agregados ---
+                Text("Artículos a facturar", style = MaterialTheme.typography.titleMedium)
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(articulosFactura) { articulo ->
+                        ArticuloItemRow(articulo = articulo, onRemove = { articulosFactura.remove(articulo) })
+                    }
+                }
+
+                // --- Totales y Botón de Guardar ---
+                val totalFactura = articulosFactura.sumOf { it.producto.precio * it.cantidad }
+                Text("Total: $${totalFactura}", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.align(Alignment.End))
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        if (isEditMode && facturaId != null) {
+                            inventarioViewModel.updateFactura(facturaId, nombreCliente, cedulaCliente, articulosFactura)
+                        } else {
+                            inventarioViewModel.generarFactura(nombreCliente, cedulaCliente, articulosFactura)
+                        }
+                        onSave()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = nombreCliente.isNotBlank() && cedulaCliente.isNotBlank() && articulosFactura.isNotEmpty()
+                ) {
+                    Text("Guardar Factura")
+                }
             }
         }
     }

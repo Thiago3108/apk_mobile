@@ -123,10 +123,16 @@ class InventarioViewModel(private val repository: InventarioRepository) : ViewMo
     suspend fun eliminarProducto(producto: Producto) {
         repository.eliminarProducto(producto)
     }
-
+    
     fun deleteFactura(facturaId: Long) {
         viewModelScope.launch {
             repository.deleteFacturaById(facturaId)
+        }
+    }
+
+    fun updateFactura(facturaId: Long, nombreCliente: String, cedulaCliente: String, articulos: List<ArticuloFactura>) {
+        viewModelScope.launch {
+            repository.updateFactura(facturaId, nombreCliente, cedulaCliente, articulos)
         }
     }
 

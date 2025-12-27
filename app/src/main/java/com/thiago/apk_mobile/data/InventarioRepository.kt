@@ -6,6 +6,7 @@ import androidx.paging.PagingData
 import androidx.room.withTransaction
 import com.thiago.apk_mobile.presentation.facturas.ArticuloFactura
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
 class InventarioRepository(
     private val db: InventarioDatabase
@@ -31,7 +32,17 @@ class InventarioRepository(
     }
 
     suspend fun deleteFacturaById(facturaId: Long) {
-        facturaDao.deleteFacturaById(facturaId)
+        val facturaOriginal = getFacturaConArticulosById(facturaId).first()
+        db.withTransaction {
+            // Restaurar stock antes de borrar
+            facturaOriginal?.articulos?.forEach { articuloOriginal ->
+                val producto = obtenerProductoPorId(articuloOriginal.productoId)
+                if (producto != null) {
+                    actualizarProducto(producto.copy(cantidadEnStock = producto.cantidadEnStock + articuloOriginal.cantidad))
+                }
+            }
+            facturaDao.deleteFacturaById(facturaId)
+        }
     }
 
     fun obtenerSugerencias(query: String): Flow<List<Producto>> {
@@ -52,8 +63,6 @@ class InventarioRepository(
     fun obtenerProductoPorIdAsFlow(id: Int): Flow<Producto?> = productoDao.obtenerProductoPorIdAsFlow(id)
 
     suspend fun registrarMovimiento(movimiento: Movimiento) {
-        // This logic is now part of transactional operations like crearFactura or procesarRecepcionPedido
-        // However, it can be kept for manual adjustments if needed.
         db.withTransaction {
             movimientoDao.insertar(movimiento)
             val producto = productoDao.obtenerProductoPorId(movimiento.productoId)
@@ -70,12 +79,10 @@ class InventarioRepository(
 
     suspend fun crearFactura(nombreCliente: String, cedulaCliente: String, articulos: List<ArticuloFactura>) {
         db.withTransaction {
-            // 1. Crear y guardar la factura
             val total = articulos.sumOf { it.producto.precio * it.cantidad }
             val factura = Factura(nombreCliente = nombreCliente, cedulaCliente = cedulaCliente, total = total)
             val facturaId = facturaDao.insertFactura(factura)
 
-            // 2. Crear y guardar los artículos de la factura
             val articulosDeFactura = articulos.map {
                 FacturaArticulo(
                     facturaId = facturaId,
@@ -86,7 +93,6 @@ class InventarioRepository(
             }
             facturaDao.insertArticulos(articulosDeFactura)
 
-            // 3. Actualizar el stock de cada producto y registrar el movimiento
             for (articulo in articulos) {
                 val producto = articulo.producto
                 val nuevoStock = (producto.cantidadEnStock - articulo.cantidad).coerceAtLeast(0)
@@ -98,6 +104,44 @@ class InventarioRepository(
                     cantidadAfectada = articulo.cantidad,
                     razon = "Venta Factura #$facturaId"
                 ))
+            }
+        }
+    }
+
+    suspend fun updateFactura(facturaId: Long, nombreCliente: String, cedulaCliente: String, nuevosArticulos: List<ArticuloFactura>) {
+        db.withTransaction {
+            val facturaOriginal = getFacturaConArticulosById(facturaId).first() ?: return@withTransaction
+
+            // 1. Restaurar stock de los productos originales
+            facturaOriginal.articulos.forEach { articuloOriginal ->
+                val producto = obtenerProductoPorId(articuloOriginal.productoId)!!
+                actualizarProducto(producto.copy(cantidadEnStock = producto.cantidadEnStock + articuloOriginal.cantidad))
+            }
+
+            // 2. Borrar los artículos antiguos y la factura (se recreará con el mismo ID)
+            facturaDao.deleteFacturaById(facturaOriginal.factura.facturaId)
+
+            // 3. Crear la factura y los artículos nuevos con la info actualizada
+            val totalNuevo = nuevosArticulos.sumOf { it.producto.precio * it.cantidad }
+            val facturaNueva = Factura(
+                facturaId = facturaId, // <-- Usamos el mismo ID
+                nombreCliente = nombreCliente,
+                cedulaCliente = cedulaCliente,
+                total = totalNuevo,
+                fecha = facturaOriginal.factura.fecha // Mantenemos la fecha original
+            )
+            facturaDao.insertFactura(facturaNueva) // Usamos REPLACE, así que actualiza o inserta
+
+            val articulosNuevosParaDb = nuevosArticulos.map {
+                FacturaArticulo(facturaId, it.producto.productoId, it.cantidad, it.producto.precio)
+            }
+            facturaDao.insertArticulos(articulosNuevosParaDb)
+
+            // 4. Descontar el stock de los nuevos productos
+            nuevosArticulos.forEach { articuloNuevo ->
+                val producto = obtenerProductoPorId(articuloNuevo.producto.productoId)!!
+                actualizarProducto(producto.copy(cantidadEnStock = producto.cantidadEnStock - articuloNuevo.cantidad))
+                // Opcional: Registrar un movimiento de "Edición de Factura"
             }
         }
     }
