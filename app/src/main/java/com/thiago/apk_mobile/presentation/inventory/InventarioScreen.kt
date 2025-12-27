@@ -1,5 +1,3 @@
-// Archivo: com/thiago/apk_mobile/presentation/inventory/InventarioScreen.kt (CORREGIDO)
-
 package com.thiago.apk_mobile.presentation.inventory
 
 import androidx.compose.foundation.clickable
@@ -14,10 +12,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
@@ -26,34 +23,33 @@ import com.thiago.apk_mobile.data.Movimiento
 import com.thiago.apk_mobile.data.Producto
 import com.thiago.apk_mobile.presentation.InventarioViewModel
 import com.thiago.apk_mobile.presentation.MetricsUiState
-import com.thiago.apk_mobile.presentation.getInventarioViewModelFactory
+import com.thiago.apk_mobile.ui.theme.Red500
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InventarioScreen(
-    modifier: Modifier = Modifier,
     onProductoClick: (Int, String) -> Unit,
-    inventarioViewModel: InventarioViewModel = viewModel(factory = getInventarioViewModelFactory(LocalContext.current))
+    inventarioViewModel: InventarioViewModel = hiltViewModel()
 ) {
     val lazyProductos: LazyPagingItems<Producto> = inventarioViewModel.productosPaginados.collectAsLazyPagingItems()
-    val searchQuery by inventarioViewModel.searchQuery.collectAsState()
     val metricsUiState by inventarioViewModel.metricsUiState.collectAsState()
+    val searchQuery by inventarioViewModel.searchQuery.collectAsState()
+    val scope = rememberCoroutineScope()
 
     var mostrarDialogoAgregar by remember { mutableStateOf(false) }
     var mostrarDialogoEditar by remember { mutableStateOf<Producto?>(null) }
     var productoAEliminar by remember { mutableStateOf<Producto?>(null) }
     var productoParaMovimiento by remember { mutableStateOf<Producto?>(null) }
 
-    val scope = rememberCoroutineScope()
-
     Scaffold(
         topBar = { InventarioTopAppBar() },
         floatingActionButton = {
             FloatingActionButton(onClick = { mostrarDialogoAgregar = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "Añadir Producto")
+                Icon(Icons.Default.Add, contentDescription = "Añadir Producto")
             }
         }
     ) { paddingValues ->
@@ -66,18 +62,23 @@ fun InventarioScreen(
             onEditClick = { producto -> mostrarDialogoEditar = producto },
             onDeleteClick = { producto -> productoAEliminar = producto },
             onRegisterMovementClick = { producto -> productoParaMovimiento = producto },
-            modifier = modifier.padding(paddingValues)
+            modifier = Modifier.padding(paddingValues)
         )
     }
 
     if (mostrarDialogoAgregar) {
         DialogoAgregarProducto(
             onDismiss = { mostrarDialogoAgregar = false },
-            onConfirm = { nombre, precio, stock ->
-                val nuevoProducto = Producto(
-                    nombre = nombre, descripcion = "", precio = precio, cantidadEnStock = 0, ubicacion = ""
-                )
+            onConfirm = { nombre, precioCompra, precioVenta, stock ->
                 scope.launch {
+                    val nuevoProducto = Producto(
+                        nombre = nombre,
+                        descripcion = "",
+                        precio = precioCompra,
+                        precioVenta = precioVenta,
+                        cantidadEnStock = 0,
+                        ubicacion = ""
+                    )
                     val id = inventarioViewModel.insertarProducto(nuevoProducto)
                     if (stock > 0) {
                         inventarioViewModel.registrarMovimientoStock(
@@ -151,10 +152,9 @@ fun InventarioBody(
     onRegisterMovementClick: (Producto) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // LA SOLUCIÓN ESTÁ AQUÍ:
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(bottom = 80.dp) // <-- AÑADIMOS PADDING INFERIOR
+        contentPadding = PaddingValues(bottom = 80.dp)
     ) {
         item(key = "search_field") {
             OutlinedTextField(
@@ -180,7 +180,7 @@ fun InventarioBody(
                     modifier = Modifier.fillParentMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No hay productos que coincidan con la búsqueda: \"$searchQuery\".")
+                    Text("No hay productos que coincidan con la búsqueda: $searchQuery.")
                 }
             }
         } else if (lazyProductos.itemCount == 0 && searchQuery.isBlank()) {
@@ -217,10 +217,11 @@ fun InventarioBody(
 @Composable
 fun DialogoAgregarProducto(
     onDismiss: () -> Unit,
-    onConfirm: (nombre: String, precio: Double, stock: Int) -> Unit
+    onConfirm: (nombre: String, precioCompra: Double, precioVenta: Double, stock: Int) -> Unit
 ) {
     var nombreInput by remember { mutableStateOf("") }
-    var precioInput by remember { mutableStateOf("") }
+    var precioCompraInput by remember { mutableStateOf("") }
+    var precioVentaInput by remember { mutableStateOf("") }
     var stockInput by remember { mutableStateOf("") }
 
     AlertDialog(
@@ -229,16 +230,18 @@ fun DialogoAgregarProducto(
         text = {
             Column {
                 OutlinedTextField(value = nombreInput, onValueChange = { nombreInput = it }, label = { Text("Nombre") })
-                OutlinedTextField(value = precioInput, onValueChange = { precioInput = it }, label = { Text("Precio") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                OutlinedTextField(value = precioCompraInput, onValueChange = { precioCompraInput = it }, label = { Text("Precio de Compra") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                OutlinedTextField(value = precioVentaInput, onValueChange = { precioVentaInput = it }, label = { Text("Precio de Venta") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                 OutlinedTextField(value = stockInput, onValueChange = { stockInput = it }, label = { Text("Stock Inicial") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             }
         },
         confirmButton = {
             Button(onClick = {
-                val precio = precioInput.toDoubleOrNull() ?: 0.0
+                val precioCompra = precioCompraInput.toDoubleOrNull() ?: 0.0
+                val precioVenta = precioVentaInput.toDoubleOrNull() ?: precioCompra // Default a precio de compra si está vacío
                 val stock = stockInput.toIntOrNull() ?: 0
                 if (nombreInput.isNotBlank()) {
-                    onConfirm(nombreInput, precio, stock)
+                    onConfirm(nombreInput, precioCompra, precioVenta, stock)
                 }
             }) { Text("Guardar") }
         },
@@ -253,7 +256,8 @@ fun DialogoEditarProducto(
     onConfirm: (Producto) -> Unit
 ) {
     var nombreInput by remember { mutableStateOf(producto.nombre) }
-    var precioInput by remember { mutableStateOf(producto.precio.toString()) }
+    var precioCompraInput by remember { mutableStateOf(producto.precio.toString()) }
+    var precioVentaInput by remember { mutableStateOf(producto.precioVenta.toString()) }
     var ubicacionInput by remember { mutableStateOf(producto.ubicacion) }
 
     AlertDialog(
@@ -262,14 +266,16 @@ fun DialogoEditarProducto(
         text = {
             Column {
                 OutlinedTextField(value = nombreInput, onValueChange = { nombreInput = it }, label = { Text("Nombre") })
-                OutlinedTextField(value = precioInput, onValueChange = { precioInput = it }, label = { Text("Precio") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                OutlinedTextField(value = precioCompraInput, onValueChange = { precioCompraInput = it }, label = { Text("Precio de Compra") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                OutlinedTextField(value = precioVentaInput, onValueChange = { precioVentaInput = it }, label = { Text("Precio de Venta") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                 OutlinedTextField(value = ubicacionInput, onValueChange = { ubicacionInput = it }, label = { Text("Ubicación") })
             }
         },
         confirmButton = {
             Button(onClick = {
-                val precio = precioInput.toDoubleOrNull() ?: producto.precio
-                val productoEditado = producto.copy(nombre = nombreInput, precio = precio, ubicacion = ubicacionInput)
+                val precioCompra = precioCompraInput.toDoubleOrNull() ?: producto.precio
+                val precioVenta = precioVentaInput.toDoubleOrNull() ?: producto.precioVenta
+                val productoEditado = producto.copy(nombre = nombreInput, precio = precioCompra, precioVenta = precioVenta, ubicacion = ubicacionInput)
                 onConfirm(productoEditado)
             }) { Text("Guardar") }
         },
@@ -291,7 +297,7 @@ fun DialogoConfirmacion(
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                colors = ButtonDefaults.buttonColors(containerColor = Red500)
             ) { Text("Confirmar") }
         },
         dismissButton = {
@@ -314,13 +320,13 @@ fun ProductoCard(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick) // Click en toda la fila para ver detalle/historial
+            .clickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(text = producto.nombre, style = MaterialTheme.typography.titleMedium)
-            Text(text = "ID: ${producto.productoId} - Precio: $${producto.precio}", style = MaterialTheme.typography.bodySmall)
+            Text(text = "PC: $${producto.precio} - PV: $${producto.precioVenta}", style = MaterialTheme.typography.bodySmall)
         }
 
         Text(
@@ -337,6 +343,10 @@ fun ProductoCard(
 
                 DropdownMenuItem(text = { Text("Editar Producto") }, onClick = {
                     onEdit()
+                    expanded = false
+                })
+                DropdownMenuItem(text = { Text("Registrar Movimiento") }, onClick = {
+                    onRegisterMovement()
                     expanded = false
                 })
                 DropdownMenuItem(text = { Text("Eliminar Producto") }, onClick = {
@@ -378,26 +388,65 @@ fun MetricasCard(metrics: MetricsUiState) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
-                    Text(text = "Unidades Totales", style = MaterialTheme.typography.bodySmall)
-                    Text(
-                        text = metrics.stockTotal.toString(),
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    )
+                 Column {
+                    Text("Stock Total", style = MaterialTheme.typography.labelSmall)
+                    Text(metrics.stockTotal.toString(), style = MaterialTheme.typography.headlineSmall)
                 }
-
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(text = "Valor Total Estimado", style = MaterialTheme.typography.bodySmall)
-                    Text(
-                        text = currencyFormat.format(metrics.valorTotal),
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    )
+                    Text("Valor Total Inventario", style = MaterialTheme.typography.labelSmall)
+                    Text(currencyFormat.format(metrics.valorTotal), style = MaterialTheme.typography.headlineSmall)
                 }
             }
         }
     }
+}
+
+@Composable
+fun DialogoRegistrarMovimiento(
+    stockActual: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (tipo: String, cantidad: Int, razon: String) -> Unit
+) {
+    var tipoMovimiento by remember { mutableStateOf("SALIDA") }
+    var cantidadInput by remember { mutableStateOf("") }
+    var razonInput by remember { mutableStateOf("") }
+    val cantidad = cantidadInput.toIntOrNull() ?: 0
+    val esSalidaValida = tipoMovimiento != "SALIDA" || cantidad <= stockActual
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Registrar Movimiento de Stock") },
+        text = {
+            Column {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = tipoMovimiento == "SALIDA", onClick = { tipoMovimiento = "SALIDA" })
+                        Text("Salida")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = tipoMovimiento == "ENTRADA", onClick = { tipoMovimiento = "ENTRADA" })
+                        Text("Entrada")
+                    }
+                }
+                OutlinedTextField(
+                    value = cantidadInput,
+                    onValueChange = { cantidadInput = it },
+                    label = { Text("Cantidad") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = !esSalidaValida
+                )
+                if (!esSalidaValida) {
+                    Text("La salida no puede exceder el stock actual ($stockActual)", color = MaterialTheme.colorScheme.error)
+                }
+                OutlinedTextField(value = razonInput, onValueChange = { razonInput = it }, label = { Text("Razón del movimiento") })
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(tipoMovimiento, cantidad, razonInput) },
+                enabled = cantidad > 0 && razonInput.isNotBlank() && esSalidaValida
+            ) { Text("Confirmar") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
 }

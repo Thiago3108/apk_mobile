@@ -79,7 +79,7 @@ class InventarioRepository(
 
     suspend fun crearFactura(nombreCliente: String, cedulaCliente: String, articulos: List<ArticuloFactura>) {
         db.withTransaction {
-            val total = articulos.sumOf { it.producto.precio * it.cantidad }
+            val total = articulos.sumOf { it.producto.precioVenta * it.cantidad }
             val factura = Factura(nombreCliente = nombreCliente, cedulaCliente = cedulaCliente, total = total)
             val facturaId = facturaDao.insertFactura(factura)
 
@@ -88,7 +88,7 @@ class InventarioRepository(
                     facturaId = facturaId,
                     productoId = it.producto.productoId,
                     cantidad = it.cantidad,
-                    precioUnitario = it.producto.precio
+                    precioUnitario = it.producto.precioVenta // Usar precio de venta
                 )
             }
             facturaDao.insertArticulos(articulosDeFactura)
@@ -122,7 +122,7 @@ class InventarioRepository(
             facturaDao.deleteFacturaById(facturaOriginal.factura.facturaId)
 
             // 3. Crear la factura y los artículos nuevos con la info actualizada
-            val totalNuevo = nuevosArticulos.sumOf { it.producto.precio * it.cantidad }
+            val totalNuevo = nuevosArticulos.sumOf { it.producto.precioVenta * it.cantidad }
             val facturaNueva = Factura(
                 facturaId = facturaId, // <-- Usamos el mismo ID
                 nombreCliente = nombreCliente,
@@ -133,7 +133,7 @@ class InventarioRepository(
             facturaDao.insertFactura(facturaNueva) // Usamos REPLACE, así que actualiza o inserta
 
             val articulosNuevosParaDb = nuevosArticulos.map {
-                FacturaArticulo(facturaId, it.producto.productoId, it.cantidad, it.producto.precio)
+                FacturaArticulo(facturaId, it.producto.productoId, it.cantidad, it.producto.precioVenta)
             }
             facturaDao.insertArticulos(articulosNuevosParaDb)
 
@@ -141,7 +141,6 @@ class InventarioRepository(
             nuevosArticulos.forEach { articuloNuevo ->
                 val producto = obtenerProductoPorId(articuloNuevo.producto.productoId)!!
                 actualizarProducto(producto.copy(cantidadEnStock = producto.cantidadEnStock - articuloNuevo.cantidad))
-                // Opcional: Registrar un movimiento de "Edición de Factura"
             }
         }
     }
@@ -158,7 +157,7 @@ class InventarioRepository(
                     val nuevoStock = productoExistente.cantidadEnStock + detalle.cantidadPedida
                     productoDao.actualizar(productoExistente.copy(
                         cantidadEnStock = nuevoStock,
-                        precio = detalle.precioUnitario
+                        precio = detalle.precioUnitario // Actualizamos precio de compra
                     ))
 
                     movimientoDao.insertar(Movimiento(
@@ -172,6 +171,7 @@ class InventarioRepository(
                         nombre = detalle.nombre,
                         cantidadEnStock = detalle.cantidadPedida,
                         precio = detalle.precioUnitario,
+                        precioVenta = detalle.precioUnitario, // Precio de venta inicial
                         descripcion = "",
                         ubicacion = ""
                     ))

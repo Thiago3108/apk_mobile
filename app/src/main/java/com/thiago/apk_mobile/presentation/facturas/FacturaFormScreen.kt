@@ -38,15 +38,12 @@ fun FacturaFormScreen(
     // Cargar los datos si estamos en modo edición
     LaunchedEffect(facturaId) {
         if (isEditMode && facturaId != null) {
-            // Combina el flujo de la factura específica y el de los productos.
-            // Esto asegura que no procedemos hasta que ambos flujos tengan datos.
             combine(
                 inventarioViewModel.getFacturaDisplayById(facturaId).filterNotNull(),
                 inventarioViewModel.productos.filter { it.isNotEmpty() }
             ) { factura, productos ->
                 factura to productos
             }.first().let { (facturaToEdit, productos) ->
-                // Una vez que tenemos ambos, rellenamos el estado del formulario
                 nombreCliente = facturaToEdit.factura.nombreCliente
                 cedulaCliente = facturaToEdit.factura.cedulaCliente
 
@@ -85,7 +82,6 @@ fun FacturaFormScreen(
                     .padding(paddingValues)
                     .padding(16.dp),
             ) {
-                // --- Sección de Datos del Cliente ---
                 OutlinedTextField(
                     value = nombreCliente,
                     onValueChange = { nombreCliente = it },
@@ -105,7 +101,6 @@ fun FacturaFormScreen(
 
                 Divider(modifier = Modifier.padding(vertical = 16.dp))
 
-                // --- Sección para Añadir Productos ---
                 ProductSuggester(
                     inventarioViewModel = inventarioViewModel,
                     articulosActuales = articulosFactura.toList()
@@ -121,17 +116,15 @@ fun FacturaFormScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // --- Lista de Artículos Agregados ---
                 Text("Artículos a facturar", style = MaterialTheme.typography.titleMedium)
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(articulosFactura) { articulo ->
-                        ArticuloItemRow(articulo = articulo, onRemove = { articulosFactura.remove(articulo) })
+                       ArticuloItemRow(articulo = articulo, onRemove = { articulosFactura.remove(articulo) })
                     }
                 }
 
-                // --- Totales y Botón de Guardar ---
-                val totalFactura = articulosFactura.sumOf { it.producto.precio * it.cantidad }
-                Text("Total: $${totalFactura}", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.align(Alignment.End))
+                val totalFactura = articulosFactura.sumOf { it.producto.precioVenta * it.cantidad }
+                Text("Total: $${String.format("%.2f", totalFactura)}", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.align(Alignment.End))
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = {
@@ -165,7 +158,6 @@ private fun ProductSuggester(
     var quantity by remember { mutableStateOf("1") }
     var isDropdownExpanded by remember { mutableStateOf(false) }
 
-    // Lógica de validación de stock
     val productoSeleccionado = selectedProduct
     val cantidadEnFactura = articulosActuales.find { it.producto.productoId == productoSeleccionado?.productoId }?.cantidad ?: 0
     val stockDisponible = (productoSeleccionado?.cantidadEnStock ?: 0) - cantidadEnFactura
@@ -190,7 +182,7 @@ private fun ProductSuggester(
             ) {
                 sugerencias.filter { it.cantidadEnStock > 0 }.forEach { producto ->
                     DropdownMenuItem(
-                        text = { Text("${producto.nombre} (Stock: ${producto.cantidadEnStock})") },
+                        text = { Text("${producto.nombre} (Venta: $${producto.precioVenta})") },
                         onClick = {
                             selectedProduct = producto
                             inventarioViewModel.onSearchQueryChange(producto.nombre)
@@ -217,7 +209,6 @@ private fun ProductSuggester(
                 onClick = {
                     if (canAdd) {
                         onAdd(productoSeleccionado!!, cantidadAAnadir)
-                        // Reset fields
                         selectedProduct = null
                         quantity = "1"
                         inventarioViewModel.onSearchQueryChange("")
@@ -244,9 +235,9 @@ private fun ArticuloItemRow(articulo: ArticuloFactura, onRemove: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
             Text(text = articulo.producto.nombre, style = MaterialTheme.typography.bodyLarge)
-            Text(text = "${articulo.cantidad} x $${String.format("%.2f", articulo.producto.precio)}", style = MaterialTheme.typography.bodySmall)
+            Text(text = "${articulo.cantidad} x $${String.format("%.2f", articulo.producto.precioVenta)}", style = MaterialTheme.typography.bodySmall)
         }
-        Text(text = "$${String.format("%.2f", articulo.producto.precio * articulo.cantidad)}", style = MaterialTheme.typography.bodyMedium)
+        Text(text = "$${String.format("%.2f", articulo.producto.precioVenta * articulo.cantidad)}", style = MaterialTheme.typography.bodyMedium)
         IconButton(onClick = onRemove) {
             Icon(Icons.Default.Delete, contentDescription = "Quitar Artículo")
         }

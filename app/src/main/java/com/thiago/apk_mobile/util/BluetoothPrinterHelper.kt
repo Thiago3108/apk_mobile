@@ -25,7 +25,6 @@ class BluetoothPrinterHelper(private val context: Context) {
     @SuppressLint("MissingPermission")
     fun getPairedDevices(): List<BluetoothDevice> {
         if (!hasBluetoothPermission()) {
-            // En una app real, deberías solicitar el permiso aquí.
             return emptyList()
         }
         return bluetoothAdapter?.bondedDevices?.toList() ?: emptyList()
@@ -42,18 +41,15 @@ class BluetoothPrinterHelper(private val context: Context) {
             return@withContext Result.failure(IllegalArgumentException("Device not found"))
         }
 
-        // UUID estándar para impresoras térmicas Bluetooth (SPP - Serial Port Profile)
         val sppUuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
 
         try {
             // Pequeño retraso para dar tiempo al stack de Bluetooth a asentarse
             delay(100)
-            
+
             device.createRfcommSocketToServiceRecord(sppUuid).use { socket ->
                 socket.connect()
                 socket.outputStream.use { outputStream ->
-                    // Aquí es donde envías el texto a la impresora
-                    // La codificación de caracteres es importante, CP437 es común para impresoras térmicas.
                     outputStream.write(text.toByteArray(charset("CP437")))
                     outputStream.flush()
                 }
@@ -66,14 +62,10 @@ class BluetoothPrinterHelper(private val context: Context) {
     }
 
     private fun hasBluetoothPermission(): Boolean {
-        // Para Android 12 (S) y superior, BLUETOOTH_CONNECT es necesario.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            return ActivityCompat.checkSelfPermission(
-                context,
-                Manifest.permission.BLUETOOTH_CONNECT
-            ) == PackageManager.PERMISSION_GRANTED
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true // Para versiones antiguas, el permiso se da en la instalación
         }
-        // Para versiones anteriores, los permisos se conceden en la instalación.
-        return true
     }
 }

@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [Producto::class, Movimiento::class, Pedido::class, DetallePedido::class, Factura::class, FacturaArticulo::class],
-    version = 6, // Incrementar la versión por el cambio en el schema
+    version = 7, // Incrementar la versión por el cambio en el schema
     exportSchema = false
 )
 abstract class InventarioDatabase : RoomDatabase() {

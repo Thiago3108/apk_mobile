@@ -1,3 +1,4 @@
+
         *** FACTURA DE VENTA ***
 
 Fecha: {{fecha}}
