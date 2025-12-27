@@ -28,13 +28,7 @@ fun getInventarioViewModelFactory(context: Context? = null): InventarioViewModel
         if (!::INSTANCE.isInitialized) {
             check(context != null) { "Contexto es requerido para inicializar el factory por primera vez" }
             val db = InventarioDatabase.getDatabase(context.applicationContext)
-            
-            // CORREGIDO: Añadimos el DAO que faltaba
-            val repository = InventarioRepository(
-                productoDao = db.productoDao(),
-                movimientoDao = db.movimientoDao(),
-                detallePedidoDao = db.detallePedidoDao() // <-- PARÁMETRO AÑADIDO
-            )
+            val repository = InventarioRepository(db)
             INSTANCE = InventarioViewModelFactory(repository)
         }
     }

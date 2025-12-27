@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material3.*
@@ -18,6 +19,8 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import com.thiago.apk_mobile.presentation.facturas.FacturaFormScreen
+import com.thiago.apk_mobile.presentation.facturas.FacturasScreen
 import com.thiago.apk_mobile.presentation.inventory.InventarioScreen
 import com.thiago.apk_mobile.presentation.inventory.MovimientosScreen
 import com.thiago.apk_mobile.presentation.InventarioViewModel
@@ -29,13 +32,13 @@ import com.thiago.apk_mobile.ui.theme.Apk_mobileTheme
 sealed class BottomBarScreen(val route: String, val label: String, val icon: ImageVector) {
     object Inventario : BottomBarScreen("inventario_section", "Inventario", Icons.Default.Inventory)
     object Pedidos : BottomBarScreen("pedidos_section", "Pedidos", Icons.Default.ListAlt)
+    object Facturas : BottomBarScreen("facturas_section", "Facturas", Icons.Default.Description)
 }
 
-// Rutas internas (las que ya tenías)
+// Rutas internas
 object Destinations {
-    const val INVENTARIO_HOME = "inventario_home"
-    const val PEDIDOS_HOME = "pedidos_home"
     const val DETAIL_ROUTE = "detail/{productoId}/{productoNombre}"
+    const val FACTURA_FORM_ROUTE = "factura_form"
 }
 
 class MainActivity : ComponentActivity() {
@@ -60,30 +63,32 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun InventoryApp(viewModel: InventarioViewModel) {
     val navController = rememberNavController()
-    val screens = listOf(BottomBarScreen.Inventario, BottomBarScreen.Pedidos)
+    val screens = listOf(BottomBarScreen.Inventario, BottomBarScreen.Pedidos, BottomBarScreen.Facturas)
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentDestination = navBackStackEntry?.destination
 
-                screens.forEach { screen ->
-                    NavigationBarItem(
-                        label = { Text(screen.label) },
-                        icon = { Icon(screen.icon, contentDescription = screen.label) },
-                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                        onClick = {
-                            navController.navigate(screen.route) {
-                                // Evita acumular muchas instancias de la misma pantalla
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+            // Solo mostrar la barra si estamos en una de las pantallas principales
+            if (currentDestination?.route in screens.map { it.route }) {
+                NavigationBar {
+                    screens.forEach { screen ->
+                        NavigationBarItem(
+                            label = { Text(screen.label) },
+                            icon = { Icon(screen.icon, contentDescription = screen.label) },
+                            selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                            onClick = {
+                                navController.navigate(screen.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -93,7 +98,6 @@ fun InventoryApp(viewModel: InventarioViewModel) {
             startDestination = BottomBarScreen.Inventario.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            // SECCIÓN: INVENTARIO (Contenedor)
             composable(BottomBarScreen.Inventario.route) {
                 InventarioScreen(
                     inventarioViewModel = viewModel,
@@ -103,12 +107,25 @@ fun InventoryApp(viewModel: InventarioViewModel) {
                 )
             }
 
-            // SECCIÓN: PEDIDOS (Contenedor)
             composable(BottomBarScreen.Pedidos.route) {
                 PedidosScreen()
             }
 
-            // RUTA DE DETALLE (Fuera de la barra pero accesible desde Inventario)
+            composable(BottomBarScreen.Facturas.route) {
+                FacturasScreen(
+                    inventarioViewModel = viewModel,
+                    onNavigateToForm = { navController.navigate(Destinations.FACTURA_FORM_ROUTE) }
+                )
+            }
+
+            composable(Destinations.FACTURA_FORM_ROUTE) {
+                FacturaFormScreen(
+                    inventarioViewModel = viewModel,
+                    onSave = { navController.popBackStack() },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
             composable(
                 route = Destinations.DETAIL_ROUTE,
                 arguments = listOf(

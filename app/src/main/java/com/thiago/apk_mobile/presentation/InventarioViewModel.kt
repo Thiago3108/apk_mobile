@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.thiago.apk_mobile.data.*
+import com.thiago.apk_mobile.presentation.facturas.ArticuloFactura
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
@@ -12,8 +13,14 @@ import kotlinx.coroutines.launch
 
 data class MovimientoFilterState(
     val tipo: String? = null,
-    val fechaInicio: Long = System.currentTimeMillis() - 315360000000L,
-    val fechaFin: Long = System.currentTimeMillis() + 86400000L
+    val fechaInicio: Long = System.currentTimeMillis() - 315360000000L, // Approx 10 years ago
+    val fechaFin: Long = System.currentTimeMillis() + 86400000L // Approx 1 day from now
+)
+
+data class FacturaFilterState(
+    val query: String = "",
+    val fechaInicio: Long = System.currentTimeMillis() - 315360000000L, // Approx 10 years ago
+    val fechaFin: Long = System.currentTimeMillis() + 86400000L // Approx 1 day from now
 )
 
 data class MetricsUiState(
@@ -29,8 +36,22 @@ class InventarioViewModel(private val repository: InventarioRepository) : ViewMo
     private val _movimientoFilterState = MutableStateFlow(MovimientoFilterState())
     val movimientoFilterState: StateFlow<MovimientoFilterState> = _movimientoFilterState
 
+    private val _facturaFilterState = MutableStateFlow(FacturaFilterState())
+    val facturaFilterState: StateFlow<FacturaFilterState> = _facturaFilterState
+
     val detallesPedido: StateFlow<List<DetallePedido>> = repository.obtenerDetallesPedido()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val productos: StateFlow<List<Producto>> = repository.getProductos()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val facturas: StateFlow<List<FacturaConArticulos>> = _facturaFilterState
+        .flatMapLatest { filter ->
+            repository.getFacturas(filter.query, filter.fechaInicio, filter.fechaFin)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val productosPaginados: Flow<PagingData<Producto>> = _searchQuery
@@ -83,6 +104,25 @@ class InventarioViewModel(private val repository: InventarioRepository) : ViewMo
         }
     }
 
+    fun generarFactura(nombreCliente: String, cedulaCliente: String, articulos: List<ArticuloFactura>) {
+        viewModelScope.launch {
+            repository.crearFactura(nombreCliente, cedulaCliente, articulos)
+        }
+    }
+
+    fun onFacturaSearchQueryChange(newQuery: String) {
+        _facturaFilterState.update { it.copy(query = newQuery) }
+    }
+
+    fun setFacturaDateRangeFilter(inicio: Long, fin: Long) {
+        _facturaFilterState.update {
+            it.copy(
+                fechaInicio = inicio,
+                fechaFin = fin + 86399000L // Include the whole end day
+            )
+        }
+    }
+
     fun obtenerMovimientosPorId(productoId: Int): Flow<List<Movimiento>> {
         return _movimientoFilterState
             .flatMapLatest { filtros ->
@@ -131,14 +171,12 @@ class InventarioViewModel(private val repository: InventarioRepository) : ViewMo
         }
     }
 
-    // CORREGIDO: Acepta la lista de detalles marcados
     fun recibirPedido(detalles: List<DetallePedido>) {
         viewModelScope.launch {
             repository.procesarRecepcionPedido(detalles)
         }
     }
 
-    // AÑADIDO: La función que faltaba
     fun limpiarPedidos() {
         viewModelScope.launch {
             repository.limpiarTodosLosPedidos()

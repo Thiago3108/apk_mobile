@@ -6,15 +6,16 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [Producto::class, Movimiento::class, Pedido::class, DetallePedido::class],
-    version = 4,
+    entities = [Producto::class, Movimiento::class, Pedido::class, DetallePedido::class, Factura::class, FacturaArticulo::class],
+    version = 5,
     exportSchema = false
 )
 abstract class InventarioDatabase : RoomDatabase() {
 
     abstract fun productoDao(): ProductoDao
     abstract fun movimientoDao(): MovimientoDao
-    abstract fun detallePedidoDao(): DetallePedidoDao // <-- AÑADIDO
+    abstract fun detallePedidoDao(): DetallePedidoDao
+    abstract fun facturaDao(): FacturaDao
 
     companion object {
         @Volatile

@@ -13,7 +13,10 @@ import kotlinx.coroutines.flow.Flow
 interface ProductoDao {
 
     @Query("SELECT * FROM productos WHERE nombre LIKE '%' || :query || '%' ORDER BY nombre ASC")
-    fun obtenerTodosProductos(query: String): PagingSource<Int, Producto>
+    fun getProductosPaginados(query: String): PagingSource<Int, Producto>
+
+    @Query("SELECT * FROM productos ORDER BY nombre ASC")
+    fun getProductos(): Flow<List<Producto>>
 
     @Query("SELECT * FROM productos WHERE productoId = :id")
     suspend fun obtenerProductoPorId(id: Int): Producto?

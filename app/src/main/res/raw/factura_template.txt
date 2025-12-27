@@ -1,0 +1,18 @@
+        *** FACTURA DE VENTA ***
+
+Fecha: {{fecha}}
+
+Cliente: {{nombre_cliente}}
+Cédula: {{cedula_cliente}}
+
+----------------------------------------
+| Artículo      | Cant | Vlr. Unit | Total |
+----------------------------------------
+{{#each articulos}}
+| {{nombre}} | {{cantidad}} | {{valor_unitario}} | {{total}} |
+{{/each}}
+----------------------------------------
+
+TOTAL A PAGAR: {{total_final}}
+
+¡Gracias por su compra!
