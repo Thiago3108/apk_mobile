@@ -16,10 +16,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.thiago.apk_mobile.data.Producto
 import com.thiago.apk_mobile.presentation.InventarioViewModel
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FacturaFormScreen(
+    facturaId: Long?,
     inventarioViewModel: InventarioViewModel,
     onSave: () -> Unit,
     onBack: () -> Unit
@@ -27,11 +30,30 @@ fun FacturaFormScreen(
     var nombreCliente by remember { mutableStateOf("") }
     var cedulaCliente by remember { mutableStateOf("") }
     val articulosFactura = remember { mutableStateListOf<ArticuloFactura>() }
+    val isEditMode = facturaId != null
+
+    // Cargar los datos si estamos en modo edición
+    LaunchedEffect(facturaId) {
+        if (isEditMode && facturaId != null) {
+            val facturaToEdit = inventarioViewModel.getFacturaDisplayById(facturaId).filterNotNull().first()
+            nombreCliente = facturaToEdit.factura.nombreCliente
+            cedulaCliente = facturaToEdit.factura.cedulaCliente
+            
+            // Mapear los artículos para la edición
+            val productos = inventarioViewModel.productos.first()
+            val articulosParaCargar = facturaToEdit.articulos.mapNotNull { articuloVendido ->
+                productos.find { it.nombre == articuloVendido.productoNombre }?.let { producto ->
+                    ArticuloFactura(producto, articuloVendido.cantidad)
+                }
+            }
+            articulosFactura.addAll(articulosParaCargar)
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Nueva Factura") },
+                title = { Text(if (isEditMode) "Editar Factura" else "Nueva Factura") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
@@ -96,7 +118,12 @@ fun FacturaFormScreen(
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = {
-                    inventarioViewModel.generarFactura(nombreCliente, cedulaCliente, articulosFactura)
+                    // TODO: Llamar a la función de actualizar si estamos en modo edición
+                    if (isEditMode) {
+                        // viewModel.updateFactura(...)
+                    } else {
+                        inventarioViewModel.generarFactura(nombreCliente, cedulaCliente, articulosFactura)
+                    }
                     onSave()
                 },
                 modifier = Modifier.fillMaxWidth(),

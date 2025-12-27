@@ -30,6 +30,10 @@ class InventarioRepository(
         return facturaDao.getFacturaConArticulosById(facturaId)
     }
 
+    suspend fun deleteFacturaById(facturaId: Long) {
+        facturaDao.deleteFacturaById(facturaId)
+    }
+
     fun obtenerSugerencias(query: String): Flow<List<Producto>> {
         return productoDao.buscarSugerencias(query)
     }

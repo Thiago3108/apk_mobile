@@ -41,6 +41,8 @@ object Destinations {
     const val DETAIL_ROUTE = "detail/{productoId}/{productoNombre}"
     const val FACTURA_FORM_ROUTE = "factura_form"
     const val FACTURA_DETAIL_ROUTE = "factura_detail/{facturaId}"
+    // Ruta para el formulario de factura, con un ID opcional para la edición
+    const val FACTURA_FORM_WITH_ID_ROUTE = "factura_form?facturaId={facturaId}"
 }
 
 class MainActivity : ComponentActivity() {
@@ -73,7 +75,7 @@ fun InventoryApp(viewModel: InventarioViewModel) {
             val currentDestination = navBackStackEntry?.destination
 
             // Solo mostrar la barra si estamos en una de las pantallas principales
-            if (currentDestination?.route in screens.map { it.route }) {
+            if (currentDestination?.route?.startsWith("factura_form") == false) {
                 NavigationBar {
                     screens.forEach { screen ->
                         NavigationBarItem(
@@ -116,15 +118,22 @@ fun InventoryApp(viewModel: InventarioViewModel) {
             composable(BottomBarScreen.Facturas.route) {
                 FacturasScreen(
                     inventarioViewModel = viewModel,
-                    onNavigateToForm = { navController.navigate(Destinations.FACTURA_FORM_ROUTE) },
-                    onNavigateToDetail = { facturaId ->
-                        navController.navigate("factura_detail/$facturaId")
-                    }
+                    onNavigateToForm = { navController.navigate(Destinations.FACTURA_FORM_WITH_ID_ROUTE.replace("{facturaId}", "0")) },
+                    onNavigateToDetail = { facturaId -> navController.navigate("factura_detail/$facturaId") },
+                    onNavigateToEdit = { facturaId -> navController.navigate("factura_form?facturaId=$facturaId")}
                 )
             }
 
-            composable(Destinations.FACTURA_FORM_ROUTE) {
+            composable(
+                route = Destinations.FACTURA_FORM_WITH_ID_ROUTE,
+                arguments = listOf(navArgument("facturaId") { 
+                    type = NavType.LongType
+                    defaultValue = 0L
+                })
+            ) { backStackEntry ->
+                val facturaId = backStackEntry.arguments?.getLong("facturaId")
                 FacturaFormScreen(
+                    facturaId = if(facturaId == 0L) null else facturaId,
                     inventarioViewModel = viewModel,
                     onSave = { navController.popBackStack() },
                     onBack = { navController.popBackStack() }

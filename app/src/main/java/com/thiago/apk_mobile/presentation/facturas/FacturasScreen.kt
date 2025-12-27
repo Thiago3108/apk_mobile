@@ -24,11 +24,13 @@ import java.util.Locale
 fun FacturasScreen(
     inventarioViewModel: InventarioViewModel,
     onNavigateToForm: () -> Unit,
-    onNavigateToDetail: (Long) -> Unit
+    onNavigateToDetail: (Long) -> Unit,
+    onNavigateToEdit: (Long) -> Unit
 ) {
     val facturas by inventarioViewModel.facturas.collectAsState()
     val filterState by inventarioViewModel.facturaFilterState.collectAsState()
     var showDatePicker by remember { mutableStateOf(false) }
+    var facturaAEliminar by remember { mutableStateOf<FacturaConArticulos?>(null) }
 
     if (showDatePicker) {
         val datePickerState = rememberDateRangePickerState()
@@ -54,6 +56,29 @@ fun FacturasScreen(
         ) {
             DateRangePicker(state = datePickerState)
         }
+    }
+
+    if (facturaAEliminar != null) {
+        AlertDialog(
+            onDismissRequest = { facturaAEliminar = null },
+            title = { Text("Confirmar Eliminación") },
+            text = { Text("¿Estás seguro de que deseas eliminar la factura de ${facturaAEliminar!!.factura.nombreCliente}?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        inventarioViewModel.deleteFactura(facturaAEliminar!!.factura.facturaId)
+                        facturaAEliminar = null
+                    }
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { facturaAEliminar = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -94,7 +119,12 @@ fun FacturasScreen(
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 16.dp)) {
                     items(facturas) {
-                        facturaItem -> FacturaCard(factura = facturaItem, onClick = { onNavigateToDetail(facturaItem.factura.facturaId) })
+                        facturaItem -> FacturaCard(
+                            factura = facturaItem,
+                            onClick = { onNavigateToDetail(facturaItem.factura.facturaId) },
+                            onDeleteClick = { facturaAEliminar = facturaItem },
+                            onEditClick = { onNavigateToEdit(facturaItem.factura.facturaId) }
+                        )
                     }
                 }
             }
@@ -103,7 +133,12 @@ fun FacturasScreen(
 }
 
 @Composable
-fun FacturaCard(factura: FacturaConArticulos, onClick: () -> Unit) {
+fun FacturaCard(
+    factura: FacturaConArticulos,
+    onClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    onEditClick: () -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
     val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
 
@@ -133,8 +168,17 @@ fun FacturaCard(factura: FacturaConArticulos, onClick: () -> Unit) {
                     onDismissRequest = { expanded = false }
                 ) {
                     DropdownMenuItem(text = { Text("Imprimir") }, onClick = { /* TODO */ ; expanded = false })
-                    DropdownMenuItem(text = { Text("Editar") }, onClick = { /* TODO */ ; expanded = false })
-                    DropdownMenuItem(text = { Text("Eliminar") }, onClick = { /* TODO */ ; expanded = false })
+                    DropdownMenuItem(text = { Text("Editar") }, onClick = {
+                        onEditClick()
+                        expanded = false
+                    })
+                    DropdownMenuItem(
+                        text = { Text("Eliminar") }, 
+                        onClick = { 
+                            onDeleteClick()
+                            expanded = false 
+                        }
+                    )
                 }
             }
         }

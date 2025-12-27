@@ -124,6 +124,12 @@ class InventarioViewModel(private val repository: InventarioRepository) : ViewMo
         repository.eliminarProducto(producto)
     }
 
+    fun deleteFactura(facturaId: Long) {
+        viewModelScope.launch {
+            repository.deleteFacturaById(facturaId)
+        }
+    }
+
     fun registrarMovimientoStock(movimiento: Movimiento) {
         viewModelScope.launch {
             repository.registrarMovimiento(movimiento)
