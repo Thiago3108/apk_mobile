@@ -68,8 +68,9 @@ fun FacturasScreen(
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
         onResult = { permissions ->
-            hasBluetoothPermissions = permissions.values.all { it }
-            if (hasBluetoothPermissions && facturaAImprimir != null) {
+            val allGranted = permissions.values.all { it }
+            hasBluetoothPermissions = allGranted
+            if (allGranted && facturaAImprimir != null) {
                 showPrintDialog = true // Vuelve a intentar mostrar el diálogo si se concedió el permiso
             }
         }
@@ -77,7 +78,9 @@ fun FacturasScreen(
 
     // Diálogo de selección de impresora
     if (showPrintDialog && facturaAImprimir != null) {
-        val pairedDevices = remember { printerHelper.getPairedDevices() }
+        val pairedDevices = remember(hasBluetoothPermissions) { 
+            if(hasBluetoothPermissions) printerHelper.getPairedDevices() else emptyList()
+        }
         DeviceSelectionDialog(
             devices = pairedDevices,
             onDeviceSelected = {
@@ -101,7 +104,10 @@ fun FacturasScreen(
                     facturaAImprimir = null
                 }
             },
-            onDismiss = { showPrintDialog = false }
+            onDismiss = { 
+                showPrintDialog = false
+                facturaAImprimir = null 
+            }
         )
     }
 
@@ -235,7 +241,8 @@ private fun DeviceSelectionDialog(
                             .fillMaxWidth()
                             .clickable { onDeviceSelected(device) }
                             .padding(vertical = 8.dp)) {
-                            Text(device.name ?: "Dispositivo desconocido")
+                            // Es más seguro usar el alias si el nombre es nulo
+                            Text(device.name ?: device.address ?: "Dispositivo desconocido")
                         }
                     }
                 }

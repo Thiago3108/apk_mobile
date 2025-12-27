@@ -7,8 +7,10 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.core.app.ActivityCompat
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.OutputStream
 import java.util.UUID
@@ -44,6 +46,9 @@ class BluetoothPrinterHelper(private val context: Context) {
         val sppUuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
 
         try {
+            // Pequeño retraso para dar tiempo al stack de Bluetooth a asentarse
+            delay(100)
+            
             device.createRfcommSocketToServiceRecord(sppUuid).use { socket ->
                 socket.connect()
                 socket.outputStream.use { outputStream ->
@@ -61,9 +66,14 @@ class BluetoothPrinterHelper(private val context: Context) {
     }
 
     private fun hasBluetoothPermission(): Boolean {
-        return ActivityCompat.checkSelfPermission(
-            context,
-            Manifest.permission.BLUETOOTH_CONNECT
-        ) == PackageManager.PERMISSION_GRANTED
+        // Para Android 12 (S) y superior, BLUETOOTH_CONNECT es necesario.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+        // Para versiones anteriores, los permisos se conceden en la instalación.
+        return true
     }
 }
