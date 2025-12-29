@@ -4,10 +4,11 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.thiago.apk_mobile.data.model.Recibo
 
 @Database(
-    entities = [Producto::class, Movimiento::class, Pedido::class, DetallePedido::class, Factura::class, FacturaArticulo::class],
-    version = 7, // Incrementar la versión por el cambio en el schema
+    entities = [Producto::class, Movimiento::class, Pedido::class, DetallePedido::class, Factura::class, FacturaArticulo::class, Recibo::class],
+    version = 9, 
     exportSchema = false
 )
 abstract class InventarioDatabase : RoomDatabase() {
@@ -16,6 +17,7 @@ abstract class InventarioDatabase : RoomDatabase() {
     abstract fun movimientoDao(): MovimientoDao
     abstract fun detallePedidoDao(): DetallePedidoDao
     abstract fun facturaDao(): FacturaDao
+    abstract fun reciboDao(): ReciboDao
 
     companion object {
         @Volatile
@@ -28,8 +30,6 @@ abstract class InventarioDatabase : RoomDatabase() {
                     InventarioDatabase::class.java,
                     "inventario_db"
                 )
-                    // Permite que Room recree la base de datos si no encuentra una migración.
-                    // ¡CUIDADO! Esto borrará los datos existentes.
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

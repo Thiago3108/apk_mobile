@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.ListAlt
+import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -27,24 +28,13 @@ import com.thiago.apk_mobile.presentation.inventory.MovimientosScreen
 import com.thiago.apk_mobile.presentation.InventarioViewModel
 import com.thiago.apk_mobile.presentation.getInventarioViewModelFactory
 import com.thiago.apk_mobile.presentation.pedidos.PedidosScreen
+import com.thiago.apk_mobile.ui.recibos.CrearReciboScreen
+import com.thiago.apk_mobile.ui.recibos.ReciboDetailScreen
+import com.thiago.apk_mobile.ui.recibos.RecibosScreen
 import com.thiago.apk_mobile.ui.theme.Apk_mobileTheme
+import dagger.hilt.android.AndroidEntryPoint
 
-// 1. Definición de las secciones principales para la barra inferior
-sealed class BottomBarScreen(val route: String, val label: String, val icon: ImageVector) {
-    object Inventario : BottomBarScreen("inventario_section", "Inventario", Icons.Default.Inventory)
-    object Pedidos : BottomBarScreen("pedidos_section", "Pedidos", Icons.Default.ListAlt)
-    object Facturas : BottomBarScreen("facturas_section", "Facturas", Icons.Default.Description)
-}
-
-// Rutas internas
-object Destinations {
-    const val DETAIL_ROUTE = "detail/{productoId}/{productoNombre}"
-    const val FACTURA_FORM_ROUTE = "factura_form"
-    const val FACTURA_DETAIL_ROUTE = "factura_detail/{facturaId}"
-    // Ruta para el formulario de factura, con un ID opcional para la edición
-    const val FACTURA_FORM_WITH_ID_ROUTE = "factura_form?facturaId={facturaId}"
-}
-
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,18 +54,38 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+sealed class BottomBarScreen(val route: String, val label: String, val icon: ImageVector) {
+    object Inventario : BottomBarScreen("inventario_section", "Inventario", Icons.Default.Inventory)
+    object Pedidos : BottomBarScreen("pedidos_section", "Pedidos", Icons.Default.ListAlt)
+    object Facturas : BottomBarScreen("facturas_section", "Facturas", Icons.Default.Description)
+    object Recibos : BottomBarScreen("recibos_section", "Recibos", Icons.Default.Receipt)
+}
+
+object Destinations {
+    const val DETAIL_ROUTE = "detail/{productoId}/{productoNombre}"
+    const val FACTURA_FORM_ROUTE = "factura_form"
+    const val FACTURA_DETAIL_ROUTE = "factura_detail/{facturaId}"
+    const val FACTURA_FORM_WITH_ID_ROUTE = "factura_form?facturaId={facturaId}"
+    const val CREAR_RECIBO_ROUTE = "crear_recibo"
+    const val RECIBO_DETAIL_ROUTE = "recibo_detail/{reciboId}"
+}
+
+
 @Composable
 fun InventoryApp(viewModel: InventarioViewModel) {
     val navController = rememberNavController()
-    val screens = listOf(BottomBarScreen.Inventario, BottomBarScreen.Pedidos, BottomBarScreen.Facturas)
+    val screens = listOf(BottomBarScreen.Inventario, BottomBarScreen.Pedidos, BottomBarScreen.Facturas, BottomBarScreen.Recibos)
 
     Scaffold(
         bottomBar = {
             val navBackStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = navBackStackEntry?.destination
 
-            // Solo mostrar la barra si estamos en una de las pantallas principales
-            if (currentDestination?.route?.startsWith("factura_form") == false) {
+            val shouldShowBottomBar = currentDestination?.route?.startsWith("factura_form") == false &&
+                                      currentDestination?.route != Destinations.CREAR_RECIBO_ROUTE &&
+                                      currentDestination?.route != Destinations.RECIBO_DETAIL_ROUTE
+
+            if (shouldShowBottomBar) {
                 NavigationBar {
                     screens.forEach { screen ->
                         NavigationBarItem(
@@ -122,6 +132,30 @@ fun InventoryApp(viewModel: InventarioViewModel) {
                     onNavigateToDetail = { facturaId -> navController.navigate("factura_detail/$facturaId") },
                     onNavigateToEdit = { facturaId -> navController.navigate("factura_form?facturaId=$facturaId")}
                 )
+            }
+            
+            composable(BottomBarScreen.Recibos.route){
+                RecibosScreen(
+                    onNavigateToCrearRecibo = { navController.navigate(Destinations.CREAR_RECIBO_ROUTE) },
+                    onReciboClick = { reciboId -> navController.navigate("recibo_detail/$reciboId") }
+                )
+            }
+
+            composable(Destinations.CREAR_RECIBO_ROUTE){
+                CrearReciboScreen(onReciboCreado = { navController.popBackStack() })
+            }
+
+            composable(
+                route = Destinations.RECIBO_DETAIL_ROUTE,
+                arguments = listOf(navArgument("reciboId") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val reciboId = backStackEntry.arguments?.getLong("reciboId")
+                if (reciboId != null) {
+                    ReciboDetailScreen(
+                        reciboId = reciboId,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
 
             composable(
