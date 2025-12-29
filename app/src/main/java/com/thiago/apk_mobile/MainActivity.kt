@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -31,6 +32,7 @@ import com.thiago.apk_mobile.presentation.pedidos.PedidosScreen
 import com.thiago.apk_mobile.ui.recibos.CrearReciboScreen
 import com.thiago.apk_mobile.ui.recibos.ReciboDetailScreen
 import com.thiago.apk_mobile.ui.recibos.RecibosScreen
+import com.thiago.apk_mobile.ui.settings.SettingsScreen
 import com.thiago.apk_mobile.ui.theme.Apk_mobileTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -59,6 +61,7 @@ sealed class BottomBarScreen(val route: String, val label: String, val icon: Ima
     object Pedidos : BottomBarScreen("pedidos_section", "Pedidos", Icons.Default.ListAlt)
     object Facturas : BottomBarScreen("facturas_section", "Facturas", Icons.Default.Description)
     object Recibos : BottomBarScreen("recibos_section", "Recibos", Icons.Default.Receipt)
+    object Ajustes : BottomBarScreen("ajustes_section", "Ajustes", Icons.Default.Settings)
 }
 
 object Destinations {
@@ -75,7 +78,7 @@ object Destinations {
 @Composable
 fun InventoryApp(viewModel: InventarioViewModel) {
     val navController = rememberNavController()
-    val screens = listOf(BottomBarScreen.Inventario, BottomBarScreen.Pedidos, BottomBarScreen.Facturas, BottomBarScreen.Recibos)
+    val screens = listOf(BottomBarScreen.Inventario, BottomBarScreen.Pedidos, BottomBarScreen.Facturas, BottomBarScreen.Recibos, BottomBarScreen.Ajustes)
 
     Scaffold(
         bottomBar = {
@@ -141,6 +144,10 @@ fun InventoryApp(viewModel: InventarioViewModel) {
                     onReciboClick = { reciboId -> navController.navigate("recibo_detail/$reciboId") },
                     onNavigateToEditRecibo = { reciboId -> navController.navigate("recibo_form?reciboId=$reciboId") }
                 )
+            }
+
+            composable(BottomBarScreen.Ajustes.route) {
+                SettingsScreen()
             }
 
             composable(
