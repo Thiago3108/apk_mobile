@@ -19,6 +19,10 @@ class ReciboRepository @Inject constructor(private val reciboDao: ReciboDao) {
         reciboDao.update(recibo)
     }
 
+    suspend fun eliminar(recibo: Recibo) {
+        reciboDao.delete(recibo)
+    }
+
     fun getRecibo(id: Long): Flow<Recibo> {
         return reciboDao.getReciboById(id)
     }

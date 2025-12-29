@@ -1,6 +1,7 @@
 package com.thiago.apk_mobile.data
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
@@ -15,6 +16,9 @@ interface ReciboDao {
 
     @Update
     suspend fun update(recibo: Recibo)
+
+    @Delete
+    suspend fun delete(recibo: Recibo)
 
     @Query("SELECT * FROM recibos ORDER BY fechaEntregaEstimada ASC")
     fun getAllRecibos(): Flow<List<Recibo>>

@@ -1,5 +1,6 @@
 package com.thiago.apk_mobile.util
 
+import com.thiago.apk_mobile.data.model.Recibo
 import com.thiago.apk_mobile.presentation.facturas.FacturaDisplay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -16,7 +17,6 @@ object PrintingHelper {
             .replace("{{cedula_cliente}}", factura.factura.cedulaCliente)
             .replace("{{total_final}}", String.format("%.2f", factura.factura.total))
 
-        // --- Procesado de Artículos (sin Regex para máxima compatibilidad) ---
         val blockStart = "{{#each articulos}}"
         val blockEnd = "{{/each}}"
 
@@ -38,5 +38,21 @@ object PrintingHelper {
         }
 
         return processedText
+    }
+
+    fun generatePrintableRecibo(template: String, recibo: Recibo): String {
+        val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+        val fechaRegistro = Date(recibo.fechaRegistro)
+
+        return template
+            .replace("{{fecha}}", sdf.format(fechaRegistro))
+            .replace("{{nombre_cliente}}", recibo.nombreCliente)
+            .replace("{{cedula_cliente}}", recibo.cedulaCliente)
+            .replace("{{telefono_cliente}}", recibo.telefonoCliente)
+            .replace("{{equipo}}", recibo.referenciaCelular)
+            .replace("{{procedimiento}}", recibo.procedimiento)
+            .replace("{{valor}}", recibo.precio.toString())
+            .replace("{{abono}}", recibo.abono.toString())
+            .replace("{{clave}}", recibo.claveDispositivo ?: "___")
     }
 }

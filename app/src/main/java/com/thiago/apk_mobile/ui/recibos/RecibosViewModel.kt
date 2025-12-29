@@ -73,4 +73,10 @@ class RecibosViewModel @Inject constructor(
             repository.actualizar(recibo)
         }
     }
+
+    fun eliminarRecibo(recibo: Recibo) {
+        viewModelScope.launch {
+            repository.eliminar(recibo)
+        }
+    }
 }

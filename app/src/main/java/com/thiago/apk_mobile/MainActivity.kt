@@ -66,7 +66,8 @@ object Destinations {
     const val FACTURA_FORM_ROUTE = "factura_form"
     const val FACTURA_DETAIL_ROUTE = "factura_detail/{facturaId}"
     const val FACTURA_FORM_WITH_ID_ROUTE = "factura_form?facturaId={facturaId}"
-    const val CREAR_RECIBO_ROUTE = "crear_recibo"
+    const val RECIBO_FORM_ROUTE = "recibo_form"
+    const val RECIBO_FORM_WITH_ID_ROUTE = "recibo_form?reciboId={reciboId}"
     const val RECIBO_DETAIL_ROUTE = "recibo_detail/{reciboId}"
 }
 
@@ -82,8 +83,8 @@ fun InventoryApp(viewModel: InventarioViewModel) {
             val currentDestination = navBackStackEntry?.destination
 
             val shouldShowBottomBar = currentDestination?.route?.startsWith("factura_form") == false &&
-                                      currentDestination?.route != Destinations.CREAR_RECIBO_ROUTE &&
-                                      currentDestination?.route != Destinations.RECIBO_DETAIL_ROUTE
+                                      !currentDestination?.route?.startsWith("recibo_form")!! &&
+                                      currentDestination.route != Destinations.RECIBO_DETAIL_ROUTE
 
             if (shouldShowBottomBar) {
                 NavigationBar {
@@ -136,13 +137,24 @@ fun InventoryApp(viewModel: InventarioViewModel) {
             
             composable(BottomBarScreen.Recibos.route){
                 RecibosScreen(
-                    onNavigateToCrearRecibo = { navController.navigate(Destinations.CREAR_RECIBO_ROUTE) },
-                    onReciboClick = { reciboId -> navController.navigate("recibo_detail/$reciboId") }
+                    onNavigateToCrearRecibo = { navController.navigate(Destinations.RECIBO_FORM_ROUTE) },
+                    onReciboClick = { reciboId -> navController.navigate("recibo_detail/$reciboId") },
+                    onNavigateToEditRecibo = { reciboId -> navController.navigate("recibo_form?reciboId=$reciboId") }
                 )
             }
 
-            composable(Destinations.CREAR_RECIBO_ROUTE){
-                CrearReciboScreen(onReciboCreado = { navController.popBackStack() })
+            composable(
+                route = Destinations.RECIBO_FORM_WITH_ID_ROUTE,
+                arguments = listOf(navArgument("reciboId") { 
+                    type = NavType.LongType
+                    defaultValue = 0L
+                })
+            ) { backStackEntry ->
+                val reciboId = backStackEntry.arguments?.getLong("reciboId")
+                CrearReciboScreen(
+                    reciboId = if(reciboId == 0L) null else reciboId,
+                    onReciboGuardado = { navController.popBackStack() }
+                )
             }
 
             composable(

@@ -13,6 +13,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,8 +30,12 @@ import java.util.concurrent.TimeUnit
 @Composable
 fun CrearReciboScreen(
     viewModel: RecibosViewModel = hiltViewModel(),
-    onReciboCreado: () -> Unit
+    reciboId: Long?,
+    onReciboGuardado: () -> Unit
 ) {
+    val isEditing = reciboId != null
+    val reciboToEdit by viewModel.selectedRecibo.collectAsState()
+
     var nombreCliente by remember { mutableStateOf("") }
     var telefonoCliente by remember { mutableStateOf("") }
     var cedulaCliente by remember { mutableStateOf("") }
@@ -41,9 +47,28 @@ fun CrearReciboScreen(
     var diasEntrega by remember { mutableStateOf("") }
     var horasEntrega by remember { mutableStateOf("") }
 
+    LaunchedEffect(reciboId) {
+        if (isEditing) {
+            viewModel.getReciboById(reciboId!!)
+        }
+    }
+
+    LaunchedEffect(reciboToEdit) {
+        if (isEditing && reciboToEdit != null) {
+            nombreCliente = reciboToEdit!!.nombreCliente
+            telefonoCliente = reciboToEdit!!.telefonoCliente
+            cedulaCliente = reciboToEdit!!.cedulaCliente
+            referenciaCelular = reciboToEdit!!.referenciaCelular
+            procedimiento = reciboToEdit!!.procedimiento
+            claveDispositivo = reciboToEdit!!.claveDispositivo ?: ""
+            precio = reciboToEdit!!.precio.toString()
+            abono = reciboToEdit!!.abono.toString()
+        }
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Crear Nuevo Recibo") })
+            TopAppBar(title = { Text(if (isEditing) "Editar Recibo" else "Crear Nuevo Recibo") })
         }
     ) { paddingValues ->
         Column(
@@ -105,21 +130,23 @@ fun CrearReciboScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth()
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                 OutlinedTextField(
-                    value = diasEntrega,
-                    onValueChange = { diasEntrega = it },
-                    label = { Text("Días") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f)
-                )
-                 OutlinedTextField(
-                    value = horasEntrega,
-                    onValueChange = { horasEntrega = it },
-                    label = { Text("Horas") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f)
-                )
+            if (!isEditing) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                     OutlinedTextField(
+                        value = diasEntrega,
+                        onValueChange = { diasEntrega = it },
+                        label = { Text("Días") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                     OutlinedTextField(
+                        value = horasEntrega,
+                        onValueChange = { horasEntrega = it },
+                        label = { Text("Horas") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
 
 
@@ -127,31 +154,45 @@ fun CrearReciboScreen(
                 onClick = {
                     val precioDouble = precio.toDoubleOrNull() ?: 0.0
                     val abonoDouble = abono.toDoubleOrNull() ?: 0.0
-                    val dias = diasEntrega.toLongOrNull() ?: 0
-                    val horas = horasEntrega.toLongOrNull() ?: 0
 
-                    val fechaRegistro = System.currentTimeMillis()
-                    val entregaMillis = TimeUnit.DAYS.toMillis(dias) + TimeUnit.HOURS.toMillis(horas)
-                    val fechaEntregaEstimada = fechaRegistro + entregaMillis
+                    if (isEditing && reciboToEdit != null) {
+                         val updatedRecibo = reciboToEdit!!.copy(
+                            nombreCliente = nombreCliente,
+                            telefonoCliente = telefonoCliente,
+                            cedulaCliente = cedulaCliente,
+                            referenciaCelular = referenciaCelular,
+                            procedimiento = procedimiento,
+                            claveDispositivo = claveDispositivo.ifEmpty { null },
+                            precio = precioDouble,
+                            abono = abonoDouble
+                        )
+                        viewModel.actualizarRecibo(updatedRecibo)
+                    } else {
+                        val dias = diasEntrega.toLongOrNull() ?: 0
+                        val horas = horasEntrega.toLongOrNull() ?: 0
+                        val fechaRegistro = System.currentTimeMillis()
+                        val entregaMillis = TimeUnit.DAYS.toMillis(dias) + TimeUnit.HOURS.toMillis(horas)
+                        val fechaEntregaEstimada = fechaRegistro + entregaMillis
 
-                    val nuevoRecibo = Recibo(
-                        nombreCliente = nombreCliente,
-                        telefonoCliente = telefonoCliente,
-                        cedulaCliente = cedulaCliente,
-                        referenciaCelular = referenciaCelular,
-                        procedimiento = procedimiento,
-                        claveDispositivo = claveDispositivo.ifEmpty { null },
-                        precio = precioDouble,
-                        abono = abonoDouble,
-                        fechaRegistro = fechaRegistro,
-                        fechaEntregaEstimada = fechaEntregaEstimada
-                    )
-                    viewModel.insertarRecibo(nuevoRecibo)
-                    onReciboCreado()
+                        val nuevoRecibo = Recibo(
+                            nombreCliente = nombreCliente,
+                            telefonoCliente = telefonoCliente,
+                            cedulaCliente = cedulaCliente,
+                            referenciaCelular = referenciaCelular,
+                            procedimiento = procedimiento,
+                            claveDispositivo = claveDispositivo.ifEmpty { null },
+                            precio = precioDouble,
+                            abono = abonoDouble,
+                            fechaRegistro = fechaRegistro,
+                            fechaEntregaEstimada = fechaEntregaEstimada
+                        )
+                        viewModel.insertarRecibo(nuevoRecibo)
+                    }
+                    onReciboGuardado()
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Guardar Recibo")
+                Text(if(isEditing) "Actualizar Recibo" else "Guardar Recibo")
             }
         }
     }
