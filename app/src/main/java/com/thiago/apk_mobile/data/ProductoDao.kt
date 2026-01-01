@@ -19,6 +19,9 @@ interface ProductoDao {
     @Query("SELECT * FROM productos ORDER BY nombre ASC")
     fun getProductos(): Flow<List<Producto>>
 
+    @Query("SELECT * FROM productos WHERE cantidadEnStock = 0")
+    fun getProductosSinStock(): Flow<List<Producto>>
+
     @Query("SELECT * FROM productos WHERE productoId = :id")
     suspend fun obtenerProductoPorId(id: Int): Producto?
 

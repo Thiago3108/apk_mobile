@@ -24,6 +24,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.thiago.apk_mobile.Destinations
 import com.thiago.apk_mobile.data.model.Pedido
+import com.thiago.apk_mobile.data.model.Producto
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -66,12 +67,24 @@ fun HomeScreen(
                     equiposEntregados = uiState.equiposEntregadosHoy
                 )
             }
-            item {
-                Text("Últimos Pedidos", style = MaterialTheme.typography.titleLarge)
+            if (uiState.productosSinStock.isNotEmpty()) {
+                item {
+                    ProductosSinStockCard(productos = uiState.productosSinStock)
+                }
             }
-            items(uiState.ultimosPedidos) {
-                pedido ->
-                PedidoCard(pedido)
+
+        }
+    }
+}
+
+@Composable
+fun ProductosSinStockCard(productos: List<Producto>) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Productos sin Stock", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            productos.forEach { producto ->
+                Text(producto.nombre)
             }
         }
     }
@@ -141,17 +154,6 @@ fun ResumenDiaCard(ingresos: Double, reparacionesTerminadas: Int, equiposEntrega
             Text("Ingresos de Hoy: ${format.format(ingresos)}")
             Text("Reparaciones terminadas hoy: $reparacionesTerminadas")
             Text("Equipos entregados hoy: $equiposEntregados")
-        }
-    }
-}
-
-@Composable
-fun PedidoCard(pedido: Pedido) {
-    val sdf = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Pedido a ${pedido.proveedor}", modifier = Modifier.weight(1f))
-            Text(sdf.format(Date(pedido.fecha)))
         }
     }
 }
