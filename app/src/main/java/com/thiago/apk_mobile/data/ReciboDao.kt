@@ -34,9 +34,10 @@ interface ReciboDao {
             -- Si se selecciona, se filtra por la fecha de entrega real
             (fechaDeEntregaReal BETWEEN :startDate AND :endDate)
         )
+        AND (:estado IS NULL OR :estado = '' OR estado = :estado)
         ORDER BY fechaEntregaEstimada ASC
         """)
-    fun getRecibosFiltrados(query: String, startDate: Long, endDate: Long): Flow<List<Recibo>>
+    fun getRecibosFiltrados(query: String, startDate: Long, endDate: Long, estado: String?): Flow<List<Recibo>>
 
 
     @Query("SELECT * FROM recibos WHERE id = :reciboId")
@@ -48,10 +49,10 @@ interface ReciboDao {
     @Query("SELECT COUNT(*) FROM recibos WHERE estado = 'ARREGLADO'")
     fun getArregladoCount(): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM recibos WHERE fechaArreglado >= :startOfDay AND estado = \"ARREGLADO\"")
+    @Query("SELECT COUNT(*) FROM recibos WHERE fechaArreglado >= :startOfDay AND estado = 'ARREGLADO'")
     fun getReparacionesTerminadasHoy(startOfDay: Long = getStartOfDay()): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM recibos WHERE fechaDeEntregaReal >= :startOfDay AND estado = \"ENTREGADO\"")
+    @Query("SELECT COUNT(*) FROM recibos WHERE fechaDeEntregaReal >= :startOfDay AND estado = 'ENTREGADO'")
     fun getEquiposEntregadosHoy(startOfDay: Long = getStartOfDay()): Flow<Int>
 
 }

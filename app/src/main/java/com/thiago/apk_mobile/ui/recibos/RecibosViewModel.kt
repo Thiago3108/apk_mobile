@@ -1,11 +1,13 @@
 package com.thiago.apk_mobile.ui.recibos
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.thiago.apk_mobile.data.model.Recibo
 import com.thiago.apk_mobile.data.repository.ReciboRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +21,8 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class RecibosViewModel @Inject constructor(
-    private val repository: ReciboRepository
+    private val repository: ReciboRepository,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -31,20 +34,33 @@ class RecibosViewModel @Inject constructor(
     private val _endDate = MutableStateFlow(Long.MAX_VALUE)
     val endDate: StateFlow<Long> = _endDate.asStateFlow()
 
-    val recibos: StateFlow<List<Recibo>> = 
-        combine(_searchQuery, _startDate, _endDate) { query, start, end ->
-            Triple(query, start, end)
-        }.flatMapLatest { (query, start, end) ->
-            repository.getRecibosFiltrados(query, start, end)
+    private val _estado: StateFlow<String?> = savedStateHandle.getStateFlow("estado", null)
+
+    // Combina los cuatro flujos de filtros. Cada vez que uno de ellos cambia,
+    // se llama al repositorio para obtener un nuevo flujo de recibos filtrados.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val recibos: StateFlow<List<Recibo>> =
+        combine(
+            _searchQuery,
+            _startDate,
+            _endDate,
+            _estado
+        ) { query, start, end, estado ->
+            // Esta lambda devuelve el *flujo* más reciente del repositorio.
+            repository.getRecibosFiltrados(query, start, end, estado)
+        }.flatMapLatest { recibosFlow ->
+            // flatMapLatest se suscribe al flujo más reciente emitido por el combine
+            // y aplana el resultado (Flow<Flow<List<Recibo>>> -> Flow<List<Recibo>>).
+            recibosFlow
         }.stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.WhileSubscribed(5000L),
             initialValue = emptyList()
         )
 
     private val _selectedRecibo = MutableStateFlow<Recibo?>(null)
     val selectedRecibo: StateFlow<Recibo?> = _selectedRecibo.asStateFlow()
-    
+
     fun onSearchQueryChange(newQuery: String) {
         _searchQuery.value = newQuery
     }

@@ -63,7 +63,7 @@ sealed class BottomBarScreen(val route: String, val label: String, val icon: Ima
     object Inventario : BottomBarScreen("inventario_section", "Inventario", Icons.Default.Inventory)
     object Pedidos : BottomBarScreen("pedidos_section", "Pedidos", Icons.Default.ListAlt)
     object Facturas : BottomBarScreen("facturas_section", "Facturas", Icons.Default.Description)
-    object Recibos : BottomBarScreen("recibos_section", "Recibos", Icons.Default.Receipt)
+    object Recibos : BottomBarScreen("recibos_section?estado={estado}", "Recibos", Icons.Default.Receipt)
     object Ajustes : BottomBarScreen("ajustes_section", "Ajustes", Icons.Default.Settings)
 }
 
@@ -150,7 +150,13 @@ fun InventoryApp(viewModel: InventarioViewModel) {
                 )
             }
             
-            composable(BottomBarScreen.Recibos.route){
+            composable(
+                route = BottomBarScreen.Recibos.route,
+                 arguments = listOf(navArgument("estado") { 
+                    type = NavType.StringType
+                    nullable = true
+                })
+            ){
                 RecibosScreen(
                     onNavigateToCrearRecibo = { navController.navigate(Destinations.RECIBO_FORM_ROUTE) },
                     onReciboClick = { reciboId -> navController.navigate("recibo_detail/$reciboId") },

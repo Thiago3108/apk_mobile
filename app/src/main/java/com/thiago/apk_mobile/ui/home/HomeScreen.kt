@@ -1,5 +1,6 @@
 package com.thiago.apk_mobile.ui.home
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -81,13 +82,23 @@ fun HomeScreen(
 fun ResumenReparacionesCard(pendientes: Int, listas: Int, navController: NavController) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { navController.navigate("recibos_section?estado=SIN_ARREGLAR") }
+            ) {
                 Text(pendientes.toString(), style = MaterialTheme.typography.headlineMedium, color = Color(0xFFD32F2F))
                 Text("Pendientes")
             }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { navController.navigate("recibos_section?estado=ARREGLADO") }
+            ) {
                 Text(listas.toString(), style = MaterialTheme.typography.headlineMedium, color = Color(0xFFFBC02D))
-                Text("Listas")
+                Text("Listos")
             }
         }
     }

@@ -7,8 +7,8 @@ import javax.inject.Inject
 
 class ReciboRepository @Inject constructor(private val reciboDao: ReciboDao) {
 
-    fun getRecibosFiltrados(query: String, startDate: Long, endDate: Long): Flow<List<Recibo>> {
-        return reciboDao.getRecibosFiltrados(query, startDate, endDate)
+    fun getRecibosFiltrados(query: String, startDate: Long, endDate: Long, estado: String?): Flow<List<Recibo>> {
+        return reciboDao.getRecibosFiltrados(query, startDate, endDate, estado)
     }
 
     suspend fun insertar(recibo: Recibo) {
