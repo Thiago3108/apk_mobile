@@ -2,7 +2,6 @@ package com.thiago.apk_mobile.ui.settings
 
 import android.app.Application
 import android.content.Intent
-import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -88,7 +87,7 @@ class SettingsViewModel @Inject constructor(
 
     fun signOut() {
         googleSignInClient.signOut().addOnCompleteListener { 
-            _uiState.update { it.copy(isLoading = false, googleUser = null) }
+            _uiState.update { it.copy(isLoading = false, googleUser = null, driveFiles = emptyList()) }
             driveHelper = null
         }
     }
@@ -108,7 +107,7 @@ class SettingsViewModel @Inject constructor(
     
     private suspend fun getAppFolderId(drive: Drive): String? = withContext(Dispatchers.IO) {
         val query = "mimeType='application/vnd.google-apps.folder' and name='$appFolderName' and trashed=false"
-        val result = drive.files().list().setQ(query).setSpaces("drive").execute()
+        val result = drive.files().list().setQ(query).setSpaces("drive").setFields("files(id)").execute()
         result.files.firstOrNull()?.id
     }
 
@@ -124,9 +123,9 @@ class SettingsViewModel @Inject constructor(
 
     fun exportDatabase() {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                try {
-                    _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                withContext(Dispatchers.IO) {
                     val drive = driveHelper?.drive ?: throw IllegalStateException("Drive not initialized")
                     val folderId = getAppFolderId(drive) ?: createAppFolder(drive)
 
@@ -151,25 +150,23 @@ class SettingsViewModel @Inject constructor(
                     drive.files().create(fileMetadata, mediaContent).execute()
                     
                     backupFile.delete()
-                     _eventFlow.emit(UiEvent.ShowSnackbar("Exportación a Drive completada."))
-                     loadBackupFiles() // Recargar la lista
-
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    _eventFlow.emit(UiEvent.ShowSnackbar("Error al exportar a Drive: ${e.message}"))
-                } finally {
-                     _uiState.update { it.copy(isLoading = false) }
-                     _eventFlow.emit(UiEvent.RestartApp)
+                    loadBackupFiles()
                 }
+                _eventFlow.emit(UiEvent.ShowSnackbar("Exportación a Drive completada."))
+                _eventFlow.emit(UiEvent.RestartApp)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _eventFlow.emit(UiEvent.ShowSnackbar("Error al exportar a Drive: ${e.message}"))
+                 _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
 
     fun importDatabase(fileId: String) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                try {
-                     _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                withContext(Dispatchers.IO) {
                     val drive = driveHelper?.drive ?: throw IllegalStateException("Drive not initialized")
                     val dbFolder = app.getDatabasePath(dbName).parentFile
 
@@ -189,32 +186,38 @@ class SettingsViewModel @Inject constructor(
                         zis.closeEntry()
                     }
                     File(dbFolder, "backup.zip").delete()
-
-                    _eventFlow.emit(UiEvent.ShowSnackbar("Importación completada. Reiniciando..."))
-                    _eventFlow.emit(UiEvent.RestartApp)
-
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    _eventFlow.emit(UiEvent.ShowSnackbar("Error al importar: ${e.message}"))
-                } finally {
-                    _uiState.update { it.copy(isLoading = false) }
                 }
+                _eventFlow.emit(UiEvent.ShowSnackbar("Importación completada. Reiniciando..."))
+                _eventFlow.emit(UiEvent.RestartApp)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _eventFlow.emit(UiEvent.ShowSnackbar("Error al importar: ${e.message}"))
+                 _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
 
     private fun loadBackupFiles(){
         viewModelScope.launch{
-            withContext(Dispatchers.IO){
-                try {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                withContext(Dispatchers.IO){
                     val drive = driveHelper?.drive ?: return@withContext
                     val folderId = getAppFolderId(drive) ?: return@withContext
                     val query = "'$folderId' in parents and mimeType='application/zip' and trashed=false"
-                    val result = drive.files().list().setQ(query).setSpaces("drive").setOrderBy("createdTime desc").execute()
-                    _uiState.update{ it.copy(driveFiles = result.files) }
-                } catch(e: Exception){
-                    e.printStackTrace()
+                    val result = drive.files().list()
+                        .setQ(query)
+                        .setSpaces("drive")
+                        .setFields("files(id, name, createdTime)")
+                        .setOrderBy("createdTime desc")
+                        .execute()
+                    _uiState.update{ it.copy(driveFiles = result.files ?: emptyList()) }
                 }
+            } catch(e: Exception){
+                e.printStackTrace()
+                _eventFlow.emit(UiEvent.ShowSnackbar("No se pudieron cargar las copias de seguridad: ${e.message}"))
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
