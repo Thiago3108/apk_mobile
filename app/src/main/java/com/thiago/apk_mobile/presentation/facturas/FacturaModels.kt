@@ -1,6 +1,6 @@
 package com.thiago.apk_mobile.presentation.facturas
 
-import com.thiago.apk_mobile.data.Producto
+import com.thiago.apk_mobile.data.model.Producto
 
 data class ArticuloFactura(
     val producto: Producto,

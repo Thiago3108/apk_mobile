@@ -1,11 +1,10 @@
-// ARCHIVO: com/thiago/apk_mobile/data/MovimientoDao.kt
-
 package com.thiago.apk_mobile.data
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.thiago.apk_mobile.data.model.Movimiento
 import kotlinx.coroutines.flow.Flow
 
 @Dao

@@ -19,8 +19,8 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
-import com.thiago.apk_mobile.data.Movimiento
-import com.thiago.apk_mobile.data.Producto
+import com.thiago.apk_mobile.data.model.Movimiento
+import com.thiago.apk_mobile.data.model.Producto
 import com.thiago.apk_mobile.presentation.InventarioViewModel
 import com.thiago.apk_mobile.presentation.MetricsUiState
 import com.thiago.apk_mobile.ui.theme.Red500

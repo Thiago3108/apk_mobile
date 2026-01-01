@@ -1,4 +1,4 @@
-package com.thiago.apk_mobile.data
+package com.thiago.apk_mobile.data.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

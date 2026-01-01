@@ -17,7 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.thiago.apk_mobile.data.Movimiento
+import com.thiago.apk_mobile.data.model.Movimiento
 import com.thiago.apk_mobile.presentation.InventarioViewModel
 import com.thiago.apk_mobile.presentation.getInventarioViewModelFactory
 import java.text.SimpleDateFormat

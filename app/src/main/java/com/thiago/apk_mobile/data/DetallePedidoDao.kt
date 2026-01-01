@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.thiago.apk_mobile.data.model.DetallePedido
 import kotlinx.coroutines.flow.Flow
 
 @Dao

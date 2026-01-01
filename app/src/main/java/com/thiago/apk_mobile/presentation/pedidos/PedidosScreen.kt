@@ -19,7 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.thiago.apk_mobile.data.DetallePedido
+import com.thiago.apk_mobile.data.model.DetallePedido
+import com.thiago.apk_mobile.data.model.Producto
 import com.thiago.apk_mobile.presentation.InventarioViewModel
 import com.thiago.apk_mobile.presentation.getInventarioViewModelFactory
 

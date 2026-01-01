@@ -5,6 +5,7 @@ import com.thiago.apk_mobile.data.DetallePedidoDao
 import com.thiago.apk_mobile.data.FacturaDao
 import com.thiago.apk_mobile.data.InventarioDatabase
 import com.thiago.apk_mobile.data.MovimientoDao
+import com.thiago.apk_mobile.data.PedidoDao
 import com.thiago.apk_mobile.data.ProductoDao
 import com.thiago.apk_mobile.data.ReciboDao
 import dagger.Module
@@ -47,5 +48,10 @@ object DatabaseModule {
     @Provides
     fun provideFacturaDao(database: InventarioDatabase): FacturaDao {
         return database.facturaDao()
+    }
+
+    @Provides
+    fun providePedidoDao(database: InventarioDatabase): PedidoDao {
+        return database.pedidoDao()
     }
 }

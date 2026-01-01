@@ -23,7 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.thiago.apk_mobile.R
-import com.thiago.apk_mobile.data.FacturaConArticulos
+import com.thiago.apk_mobile.data.model.FacturaConArticulos
 import com.thiago.apk_mobile.presentation.InventarioViewModel
 import com.thiago.apk_mobile.util.BluetoothPrinterHelper
 import com.thiago.apk_mobile.util.PrintingHelper

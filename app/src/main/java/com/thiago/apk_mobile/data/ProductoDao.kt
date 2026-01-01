@@ -7,6 +7,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import com.thiago.apk_mobile.data.model.Producto
 import kotlinx.coroutines.flow.Flow
 
 @Dao

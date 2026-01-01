@@ -4,13 +4,29 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import com.thiago.apk_mobile.data.*
+import com.thiago.apk_mobile.data.InventarioRepository
+import com.thiago.apk_mobile.data.model.DetallePedido
+import com.thiago.apk_mobile.data.model.FacturaConArticulos
+import com.thiago.apk_mobile.data.model.Movimiento
+import com.thiago.apk_mobile.data.model.Producto
 import com.thiago.apk_mobile.presentation.facturas.ArticuloFactura
 import com.thiago.apk_mobile.presentation.facturas.ArticuloVendidoDisplay
 import com.thiago.apk_mobile.presentation.facturas.FacturaDisplay
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class MovimientoFilterState(

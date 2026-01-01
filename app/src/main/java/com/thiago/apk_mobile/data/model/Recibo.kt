@@ -18,5 +18,6 @@ data class Recibo(
     val fechaRegistro: Long,
     val fechaEntregaEstimada: Long,
     val estado: String = "SIN_ARREGLAR", // Valores: SIN_ARREGLAR, ARREGLADO, ENTREGADO
-    val fechaDeEntregaReal: Long? = null
+    val fechaDeEntregaReal: Long? = null,
+    val fechaArreglado: Long? = null
 )

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.Receipt
@@ -29,6 +30,7 @@ import com.thiago.apk_mobile.presentation.inventory.MovimientosScreen
 import com.thiago.apk_mobile.presentation.InventarioViewModel
 import com.thiago.apk_mobile.presentation.getInventarioViewModelFactory
 import com.thiago.apk_mobile.presentation.pedidos.PedidosScreen
+import com.thiago.apk_mobile.ui.home.HomeScreen
 import com.thiago.apk_mobile.ui.recibos.CrearReciboScreen
 import com.thiago.apk_mobile.ui.recibos.ReciboDetailScreen
 import com.thiago.apk_mobile.ui.recibos.RecibosScreen
@@ -57,6 +59,7 @@ class MainActivity : ComponentActivity() {
 }
 
 sealed class BottomBarScreen(val route: String, val label: String, val icon: ImageVector) {
+    object Home : BottomBarScreen("home_section", "Inicio", Icons.Default.Home)
     object Inventario : BottomBarScreen("inventario_section", "Inventario", Icons.Default.Inventory)
     object Pedidos : BottomBarScreen("pedidos_section", "Pedidos", Icons.Default.ListAlt)
     object Facturas : BottomBarScreen("facturas_section", "Facturas", Icons.Default.Description)
@@ -72,13 +75,14 @@ object Destinations {
     const val RECIBO_FORM_ROUTE = "recibo_form"
     const val RECIBO_FORM_WITH_ID_ROUTE = "recibo_form?reciboId={reciboId}"
     const val RECIBO_DETAIL_ROUTE = "recibo_detail/{reciboId}"
+    const val PEDIDO_FORM_ROUTE = "pedido_form"
 }
 
 
 @Composable
 fun InventoryApp(viewModel: InventarioViewModel) {
     val navController = rememberNavController()
-    val screens = listOf(BottomBarScreen.Inventario, BottomBarScreen.Pedidos, BottomBarScreen.Facturas, BottomBarScreen.Recibos, BottomBarScreen.Ajustes)
+    val screens = listOf(BottomBarScreen.Home, BottomBarScreen.Inventario, BottomBarScreen.Pedidos, BottomBarScreen.Facturas, BottomBarScreen.Recibos, BottomBarScreen.Ajustes)
 
     Scaffold(
         bottomBar = {
@@ -113,9 +117,13 @@ fun InventoryApp(viewModel: InventarioViewModel) {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = BottomBarScreen.Inventario.route,
+            startDestination = BottomBarScreen.Home.route, // <-- Nueva pantalla de inicio
             modifier = Modifier.padding(innerPadding)
         ) {
+            composable(BottomBarScreen.Home.route) {
+                HomeScreen(navController = navController)
+            }
+
             composable(BottomBarScreen.Inventario.route) {
                 InventarioScreen(
                     inventarioViewModel = viewModel,
@@ -126,6 +134,10 @@ fun InventoryApp(viewModel: InventarioViewModel) {
             }
 
             composable(BottomBarScreen.Pedidos.route) {
+                PedidosScreen()
+            }
+
+            composable(Destinations.PEDIDO_FORM_ROUTE) {
                 PedidosScreen()
             }
 

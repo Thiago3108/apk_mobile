@@ -4,6 +4,12 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.room.withTransaction
+import com.thiago.apk_mobile.data.model.DetallePedido
+import com.thiago.apk_mobile.data.model.Factura
+import com.thiago.apk_mobile.data.model.FacturaArticulo
+import com.thiago.apk_mobile.data.model.FacturaConArticulos
+import com.thiago.apk_mobile.data.model.Movimiento
+import com.thiago.apk_mobile.data.model.Producto
 import com.thiago.apk_mobile.presentation.facturas.ArticuloFactura
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -83,7 +89,7 @@ class InventarioRepository(
             val factura = Factura(nombreCliente = nombreCliente, cedulaCliente = cedulaCliente, total = total)
             val facturaId = facturaDao.insertFactura(factura)
 
-            val articulosDeFactura = articulos.map {
+            val articulosDeFactura = articulos.map { 
                 FacturaArticulo(
                     facturaId = facturaId,
                     productoId = it.producto.productoId,

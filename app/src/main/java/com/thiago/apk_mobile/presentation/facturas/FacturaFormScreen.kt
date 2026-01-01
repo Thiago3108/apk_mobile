@@ -14,7 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.thiago.apk_mobile.data.Producto
+import com.thiago.apk_mobile.data.model.Producto
 import com.thiago.apk_mobile.presentation.InventarioViewModel
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filter

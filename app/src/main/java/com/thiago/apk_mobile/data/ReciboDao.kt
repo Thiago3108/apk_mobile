@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Update
 import com.thiago.apk_mobile.data.model.Recibo
 import kotlinx.coroutines.flow.Flow
+import java.util.Calendar
 
 @Dao
 interface ReciboDao {
@@ -41,4 +42,25 @@ interface ReciboDao {
     @Query("SELECT * FROM recibos WHERE id = :reciboId")
     fun getReciboById(reciboId: Long): Flow<Recibo>
 
+    @Query("SELECT COUNT(*) FROM recibos WHERE estado = 'SIN_ARREGLAR'")
+    fun getSinArreglarCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM recibos WHERE estado = 'ARREGLADO'")
+    fun getArregladoCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM recibos WHERE fechaArreglado >= :startOfDay AND estado = \"ARREGLADO\"")
+    fun getReparacionesTerminadasHoy(startOfDay: Long = getStartOfDay()): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM recibos WHERE fechaDeEntregaReal >= :startOfDay AND estado = \"ENTREGADO\"")
+    fun getEquiposEntregadosHoy(startOfDay: Long = getStartOfDay()): Flow<Int>
+
+}
+
+private fun getStartOfDay(): Long {
+    return Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
 }

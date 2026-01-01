@@ -1,6 +1,6 @@
 package com.thiago.apk_mobile.presentation.facturas
 
-import com.thiago.apk_mobile.data.Factura
+import com.thiago.apk_mobile.data.model.Factura
 
 /**
  * Clase de datos específica para la UI. No es parte de la base de datos.
